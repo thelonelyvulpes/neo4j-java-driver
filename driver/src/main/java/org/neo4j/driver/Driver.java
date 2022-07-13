@@ -18,11 +18,14 @@
  */
 package org.neo4j.driver;
 
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.reactive.ReactiveSession;
 import org.neo4j.driver.reactive.RxSession;
+import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.TypeSystem;
 import org.neo4j.driver.util.Experimental;
 
@@ -221,7 +224,6 @@ public interface Driver extends AutoCloseable {
     CompletionStage<Void> verifyConnectivityAsync();
 
     /**
-     * Returns true if the server or cluster the driver connects to supports multi-databases, otherwise false.
      * @return true if the server or cluster the driver connects to supports multi-databases, otherwise false.
      */
     boolean supportsMultiDb();
@@ -232,4 +234,29 @@ public interface Driver extends AutoCloseable {
      * the driver connects to supports multi-databases, otherwise false.
      */
     CompletionStage<Boolean> supportsMultiDbAsync();
+
+    CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess);
+
+    CompletionStage<QueryResult> queryAsync(
+            String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
+
+    CompletionStage<QueryResult> queryAsync(Query query, ClusterMemberAccess clusterMemberAccess);
+
+    CompletionStage<QueryResult> queryAsync(String query, DriverQueryConfig config);
+
+    CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, DriverQueryConfig config);
+
+    CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config);
+
+    QueryResult query(String query, ClusterMemberAccess clusterMemberAccess);
+
+    QueryResult query(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
+
+    QueryResult query(Query query, ClusterMemberAccess clusterMemberAccess);
+
+    QueryResult query(String query, DriverQueryConfig config);
+
+    QueryResult query(String query, Map<String, Object> parameters, DriverQueryConfig config);
+
+    QueryResult query(Query query, DriverQueryConfig config);
 }

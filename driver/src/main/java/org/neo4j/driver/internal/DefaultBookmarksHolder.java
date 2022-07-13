@@ -48,4 +48,12 @@ public class DefaultBookmarksHolder implements BookmarksHolder {
             bookmarks = Collections.singleton(bookmark);
         }
     }
+
+    @Override
+    public void setBookmarks(Set<Bookmark> bookmarks) {
+
+        if (bookmarks != null && !bookmarks.isEmpty()) {
+            this.bookmarks = bookmarks;
+        }
+    }
 }

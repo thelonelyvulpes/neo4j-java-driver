@@ -27,6 +27,8 @@ public interface BookmarksHolder {
 
     void setBookmark(Bookmark bookmark);
 
+    void setBookmarks(Set<Bookmark> bookmarks);
+
     BookmarksHolder NO_OP = new BookmarksHolder() {
         @Override
         public Set<Bookmark> getBookmarks() {
@@ -35,5 +37,8 @@ public interface BookmarksHolder {
 
         @Override
         public void setBookmark(Bookmark bookmark) {}
+
+        @Override
+        public void setBookmarks(Set<Bookmark> bookmark) {}
     };
 }

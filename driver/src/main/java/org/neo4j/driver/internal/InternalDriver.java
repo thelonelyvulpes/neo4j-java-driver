@@ -20,15 +20,17 @@ package org.neo4j.driver.internal;
 
 import static org.neo4j.driver.internal.util.Futures.completedWithNull;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.Logger;
-import org.neo4j.driver.Logging;
-import org.neo4j.driver.Metrics;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.SessionConfig;
+import java.util.function.BiFunction;
+
+import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
 import org.neo4j.driver.async.AsyncSession;
+import org.neo4j.driver.async.AsyncTransactionContext;
+import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.driver.internal.async.InternalAsyncSession;
 import org.neo4j.driver.internal.async.NetworkSession;
 import org.neo4j.driver.internal.metrics.DevNullMetricsProvider;
@@ -40,15 +42,16 @@ import org.neo4j.driver.internal.types.InternalTypeSystem;
 import org.neo4j.driver.internal.util.Futures;
 import org.neo4j.driver.reactive.ReactiveSession;
 import org.neo4j.driver.reactive.RxSession;
+import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.TypeSystem;
 
 public class InternalDriver implements Driver {
     private final SecurityPlan securityPlan;
     private final SessionFactory sessionFactory;
     private final Logger log;
-
     private AtomicBoolean closed = new AtomicBoolean(false);
     private final MetricsProvider metricsProvider;
+    private final BookmarksHolder bookmarksHolder;
 
     InternalDriver(
             SecurityPlan securityPlan,
@@ -59,6 +62,7 @@ public class InternalDriver implements Driver {
         this.sessionFactory = sessionFactory;
         this.metricsProvider = metricsProvider;
         this.log = logging.getLog(getClass());
+        this.bookmarksHolder = new DefaultBookmarksHolder();
     }
 
     @Override
@@ -139,6 +143,148 @@ public class InternalDriver implements Driver {
     @Override
     public CompletionStage<Boolean> supportsMultiDbAsync() {
         return sessionFactory.supportsMultiDb();
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess) {
+        return this.queryAsync(new Query(query), new DriverQueryConfig(clusterMemberAccess));
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(
+            String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess) {
+        return this.queryAsync(new Query(query, parameters), new DriverQueryConfig(clusterMemberAccess));
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(Query query, ClusterMemberAccess clusterMemberAccess) {
+        return this.queryAsync(query, new DriverQueryConfig(clusterMemberAccess));
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, DriverQueryConfig config) {
+        return this.queryAsync(new Query(query), config);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(
+            String query, Map<String, Object> parameters, DriverQueryConfig config) {
+        return this.queryAsync(new Query(query, parameters), config);
+    }
+
+    @Override
+    public QueryResult query(String query, ClusterMemberAccess clusterMemberAccess) {
+        return this.query(new Query(query), new DriverQueryConfig(clusterMemberAccess));
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess) {
+        return this.query(new Query(query, parameters), new DriverQueryConfig(clusterMemberAccess));
+    }
+
+    @Override
+    public QueryResult query(Query query, ClusterMemberAccess clusterMemberAccess) {
+        return this.query(query, new DriverQueryConfig(clusterMemberAccess));
+    }
+
+    @Override
+    public QueryResult query(String query, DriverQueryConfig config) {
+        return this.query(new Query(query), config);
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters, DriverQueryConfig config) {
+        return this.query(new Query(query, parameters), config);
+    }
+
+    private CompletionStage<Void> updateBookmarks(AsyncSession inst) {
+        this.bookmarksHolder.setBookmarks(inst.lastBookmarks());
+        return inst.closeAsync();
+    }
+
+    private CompletionStage<QueryResult> executeQueryInCtxAsync(Query query, AsyncTransactionContext ctx) {
+        var cursorFuture = ctx.runAsync(query);
+        return cursorFuture
+                .thenApplyAsync(ResultCursor::listAsync)
+                .thenCombineAsync(
+                        cursorFuture.thenApplyAsync(ResultCursor::consumeAsync),
+                        (listCompletionStage, summaryCompletionStage) -> new Object() {
+                            final ResultSummary summary = Futures.getNow(summaryCompletionStage);
+                            final List<Record> records = Futures.getNow(listCompletionStage);
+                        })
+                .thenCombine(
+                        cursorFuture.thenApply(ResultCursor::keys),
+                        (x, y) ->
+                                new QueryResult(x.records.toArray(new Record[0]), x.summary, y.toArray(new String[0])));
+    }
+
+    public QueryResult executeQueryBlocking(TransactionContext ctx, Query query) {
+        var cursor = ctx.run(query);
+        var records = cursor.list();
+        var summary = cursor.consume();
+        return new QueryResult(
+                records.toArray(new Record[0]), summary, cursor.keys().toArray(new String[0]));
+    }
+
+    @Override
+    public QueryResult query(Query query, DriverQueryConfig config) {
+        if (!validateConfig(config)) {
+            throw new IllegalStateException("Config specified was not valid.");
+        }
+
+        var inst = session(readSessionConfig(config));
+        try {
+            var access = config.access();
+
+            if (access == ClusterMemberAccess.Automatic) {
+                // not implemented yet;
+                // is it bolt or ServerSideRouting enabled
+                verifyConnectivity();
+                return null;
+            }
+
+            if (access == ClusterMemberAccess.Readers) {
+                return inst.executeRead(ctx -> executeQueryBlocking(ctx, query));
+            } else {
+                return inst.executeWrite(ctx -> executeQueryBlocking(ctx, query));
+            }
+        } finally {
+            this.bookmarksHolder.setBookmark(inst.lastBookmark());
+            inst.close();
+        }
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config) {
+        if (!validateConfig(config)) {
+            throw new IllegalStateException("Config specified was not valid.");
+        }
+        var inst = asyncSession(readSessionConfig(config));
+
+        if (config.access() == ClusterMemberAccess.Automatic) {
+            // not implemented yet;
+            return Futures.asCompletionStage(null);
+        } else if (config.access() == ClusterMemberAccess.Readers) {
+            return inst.executeReadAsync(ctx -> executeQueryInCtxAsync(query, ctx), readTxConfig(config))
+                    .thenCombine(updateBookmarks(inst), (x, y) -> x);
+        } else {
+            return inst.executeWriteAsync(ctx -> executeQueryInCtxAsync(query, ctx), readTxConfig(config))
+                    .thenCombine(updateBookmarks(inst), (x, y) -> x);
+        }
+    }
+
+    private TransactionConfig readTxConfig(DriverQueryConfig config) {
+        return TransactionConfig.builder().build();
+    }
+
+    private SessionConfig readSessionConfig(DriverQueryConfig config) {
+        var builder = SessionConfig.builder();
+        builder.withBookmarks(bookmarksHolder.getBookmarks());
+        return builder.build();
+    }
+
+    private boolean validateConfig(DriverQueryConfig config) {
+        return true;
     }
 
     @Override

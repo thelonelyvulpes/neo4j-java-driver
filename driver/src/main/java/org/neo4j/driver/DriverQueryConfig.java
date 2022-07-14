@@ -1,6 +1,15 @@
 package org.neo4j.driver;
 
-public record DriverQueryConfig(ClusterMemberAccess access) {
+import java.util.Optional;
+import java.util.Set;
 
+public record DriverQueryConfig(
+        ClusterMemberAccess access,
+        Optional<Set<Bookmark>> bookmarks,
+        Optional<String> database) {
+
+    public static DriverQueryConfigBuilder builder() {
+        return new DriverQueryConfigBuilder();
+    }
 }
 

@@ -37,6 +37,7 @@ public class DirectConnection implements Connection {
     private final DatabaseName databaseName;
     private final String impersonatedUser;
 
+
     public DirectConnection(Connection delegate, DatabaseName databaseName, AccessMode mode, String impersonatedUser) {
         this.delegate = delegate;
         this.mode = mode;
@@ -131,5 +132,10 @@ public class DirectConnection implements Connection {
     @Override
     public void flush() {
         delegate.flush();
+    }
+
+    @Override
+    public boolean supportsAutoRoutingQuery() {
+        return true;
     }
 }

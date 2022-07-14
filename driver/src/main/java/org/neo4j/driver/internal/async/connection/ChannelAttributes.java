@@ -49,6 +49,8 @@ public final class ChannelAttributes {
     // configuration hints provided by the server
     private static final AttributeKey<Long> CONNECTION_READ_TIMEOUT = newInstance("connectionReadTimeout");
 
+    private static final AttributeKey<Boolean> SUPPORTS_AUTO_ROUTING_QUERY = newInstance("supportsAutoRoutingQuery");
+
     private ChannelAttributes() {}
 
     public static String connectionId(Channel channel) {
@@ -57,6 +59,10 @@ public final class ChannelAttributes {
 
     public static void setConnectionId(Channel channel, String id) {
         setOnce(channel, CONNECTION_ID, id);
+    }
+
+    public static void setAutoRoutingQuery(Channel channel, boolean extractServerSideRouting) {
+        setOnce(channel, SUPPORTS_AUTO_ROUTING_QUERY, extractServerSideRouting);
     }
 
     public static String poolId(Channel channel) {
@@ -156,6 +162,10 @@ public final class ChannelAttributes {
 
     private static <T> T get(Channel channel, AttributeKey<T> key) {
         return channel.attr(key).get();
+    }
+
+    public static Boolean supportsAutoRouteQuery(Channel channel) {
+        return Optional.ofNullable(get(channel, SUPPORTS_AUTO_ROUTING_QUERY));
     }
 
     private static <T> void set(Channel channel, AttributeKey<T> key, T value) {

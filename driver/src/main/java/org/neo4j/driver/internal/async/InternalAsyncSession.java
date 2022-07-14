@@ -23,21 +23,19 @@ import static org.neo4j.driver.internal.util.Futures.completedWithNull;
 import static org.neo4j.driver.internal.util.Futures.failedFuture;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.Bookmark;
-import org.neo4j.driver.Query;
-import org.neo4j.driver.TransactionConfig;
-import org.neo4j.driver.async.AsyncSession;
-import org.neo4j.driver.async.AsyncTransaction;
-import org.neo4j.driver.async.AsyncTransactionCallback;
-import org.neo4j.driver.async.AsyncTransactionWork;
-import org.neo4j.driver.async.ResultCursor;
+
+import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.async.*;
+import org.neo4j.driver.internal.BookmarksHolder;
 import org.neo4j.driver.internal.InternalBookmark;
 import org.neo4j.driver.internal.util.Futures;
+import org.neo4j.driver.summary.ResultSummary;
 
 public class InternalAsyncSession extends AsyncAbstractQueryRunner implements AsyncSession {
     private final NetworkSession session;
@@ -194,5 +192,37 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
                 resultFuture.complete(result);
             }
         });
+    }
+
+    public CompletionStage<QueryResult> executeQueryAsync(Query query,
+                                                     ClusterMemberAccess cma,
+                                                     TransactionConfig txConfig) {
+        return switch (cma) {
+            case Automatic -> ValidateCanRouteAndExecute(query, txConfig);
+            case Readers -> executeReadAsync(x -> executeQueryInCtxAsync(query, x), txConfig);
+            case Writers -> executeWriteAsync(x -> executeQueryInCtxAsync(query, x), txConfig);
+        };
+     }
+
+    private CompletionStage<QueryResult> ValidateCanRouteAndExecute(Query query, TransactionConfig txConfig) {
+        this.session.canAutomaticallyRouteAsync()
+
+    }
+
+
+    private CompletionStage<QueryResult> executeQueryInCtxAsync(Query query, AsyncTransactionContext ctx) {
+        var cursorFuture = ctx.runAsync(query);
+        return cursorFuture
+                .thenApplyAsync(ResultCursor::listAsync)
+                .thenCombineAsync(
+                        cursorFuture.thenApplyAsync(ResultCursor::consumeAsync),
+                        (listCompletionStage, summaryCompletionStage) -> new Object() {
+                            final ResultSummary summary = Futures.getNow(summaryCompletionStage);
+                            final List<Record> records = Futures.getNow(listCompletionStage);
+                        })
+                .thenCombine(
+                        cursorFuture.thenApply(ResultCursor::keys),
+                        (x, y) ->
+                                new QueryResult(x.records.toArray(new Record[0]), x.summary, y.toArray(new String[0])));
     }
 }

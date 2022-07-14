@@ -67,4 +67,6 @@ public interface Connection {
     }
 
     void flush();
+
+    boolean supportsAutoRoutingQuery();
 }

@@ -124,6 +124,11 @@ public class RoutingConnection implements Connection {
     }
 
     @Override
+    public boolean supportsAutoRoutingQuery() {
+        return delegate.supportsAutoRoutingQuery();
+    }
+
+    @Override
     public AccessMode mode() {
         return this.accessMode;
     }

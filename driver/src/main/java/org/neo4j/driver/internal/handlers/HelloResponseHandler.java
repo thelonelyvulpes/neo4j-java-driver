@@ -18,11 +18,7 @@
  */
 package org.neo4j.driver.internal.handlers;
 
-import static org.neo4j.driver.internal.async.connection.ChannelAttributes.boltPatchesListeners;
-import static org.neo4j.driver.internal.async.connection.ChannelAttributes.protocolVersion;
-import static org.neo4j.driver.internal.async.connection.ChannelAttributes.setConnectionId;
-import static org.neo4j.driver.internal.async.connection.ChannelAttributes.setConnectionReadTimeout;
-import static org.neo4j.driver.internal.async.connection.ChannelAttributes.setServerAgent;
+import static org.neo4j.driver.internal.async.connection.ChannelAttributes.*;
 import static org.neo4j.driver.internal.util.MetadataExtractor.extractBoltPatches;
 import static org.neo4j.driver.internal.util.MetadataExtractor.extractServer;
 
@@ -70,6 +66,8 @@ public class HelloResponseHandler implements ResponseHandler {
                 }
             }
 
+            setAutoRoutingQuery(channel, extractServerSideRouting(metadata));
+
             connectionInitializedPromise.setSuccess();
         } catch (Throwable error) {
             onFailure(error);
@@ -94,6 +92,14 @@ public class HelloResponseHandler implements ResponseHandler {
                     + " from a response to HELLO message. " + "Received metadata: " + metadata);
         }
         return value.asString();
+    }
+
+    private static boolean extractServerSideRouting(Map<String, Value> metadata) {
+        Value value = metadata.get("ServerSideRouting");
+        if (value == null || value.isNull()) {
+            return false;
+        }
+        return value.asBoolean();
     }
 
     private void processConfigurationHints(Map<String, Value> metadata) {

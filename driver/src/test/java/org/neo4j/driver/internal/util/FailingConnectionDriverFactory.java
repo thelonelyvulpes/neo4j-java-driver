@@ -194,6 +194,11 @@ public class FailingConnectionDriverFactory extends DriverFactory {
             delegate.flush();
         }
 
+        @Override
+        public boolean supportsAutoRoutingQuery() {
+            return delegate.supportsAutoRoutingQuery();
+        }
+
         private boolean tryFail(ResponseHandler handler1, ResponseHandler handler2) {
             Throwable failure = nextRunFailure.getAndSet(null);
             if (failure != null) {

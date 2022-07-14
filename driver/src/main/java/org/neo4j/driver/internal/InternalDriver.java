@@ -20,6 +20,8 @@ package org.neo4j.driver.internal;
 
 import static org.neo4j.driver.internal.util.Futures.completedWithNull;
 
+import java.awt.print.Book;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
@@ -147,7 +149,7 @@ public class InternalDriver implements Driver {
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess) {
-        return this.queryAsync(new Query(query), new DriverQueryConfig(clusterMemberAccess));
+        return this.queryAsync(new Query(query), x -> x.withClusterMemeberAccess());
     }
 
     @Override
@@ -184,7 +186,7 @@ public class InternalDriver implements Driver {
 
     @Override
     public QueryResult query(Query query, ClusterMemberAccess clusterMemberAccess) {
-        return this.query(query, new DriverQueryConfig(clusterMemberAccess));
+        return this.query(query, x -> x.withClusterMemberAccess(clusterMemberAccess));
     }
 
     @Override
@@ -202,56 +204,9 @@ public class InternalDriver implements Driver {
         return inst.closeAsync();
     }
 
-    private CompletionStage<QueryResult> executeQueryInCtxAsync(Query query, AsyncTransactionContext ctx) {
-        var cursorFuture = ctx.runAsync(query);
-        return cursorFuture
-                .thenApplyAsync(ResultCursor::listAsync)
-                .thenCombineAsync(
-                        cursorFuture.thenApplyAsync(ResultCursor::consumeAsync),
-                        (listCompletionStage, summaryCompletionStage) -> new Object() {
-                            final ResultSummary summary = Futures.getNow(summaryCompletionStage);
-                            final List<Record> records = Futures.getNow(listCompletionStage);
-                        })
-                .thenCombine(
-                        cursorFuture.thenApply(ResultCursor::keys),
-                        (x, y) ->
-                                new QueryResult(x.records.toArray(new Record[0]), x.summary, y.toArray(new String[0])));
-    }
-
-    public QueryResult executeQueryBlocking(TransactionContext ctx, Query query) {
-        var cursor = ctx.run(query);
-        var records = cursor.list();
-        var summary = cursor.consume();
-        return new QueryResult(
-                records.toArray(new Record[0]), summary, cursor.keys().toArray(new String[0]));
-    }
-
     @Override
     public QueryResult query(Query query, DriverQueryConfig config) {
-        if (!validateConfig(config)) {
-            throw new IllegalStateException("Config specified was not valid.");
-        }
-
-        var inst = session(readSessionConfig(config));
-        try {
-            var access = config.access();
-
-            if (access == ClusterMemberAccess.Automatic) {
-                // not implemented yet;
-                // is it bolt or ServerSideRouting enabled
-                verifyConnectivity();
-                return null;
-            }
-
-            if (access == ClusterMemberAccess.Readers) {
-                return inst.executeRead(ctx -> executeQueryBlocking(ctx, query));
-            } else {
-                return inst.executeWrite(ctx -> executeQueryBlocking(ctx, query));
-            }
-        } finally {
-            this.bookmarksHolder.setBookmark(inst.lastBookmark());
-            inst.close();
-        }
+        return Futures.blockingGet(this.queryAsync(query, config));
     }
 
     @Override
@@ -259,18 +214,12 @@ public class InternalDriver implements Driver {
         if (!validateConfig(config)) {
             throw new IllegalStateException("Config specified was not valid.");
         }
-        var inst = asyncSession(readSessionConfig(config));
+        var internalSession = (InternalAsyncSession)asyncSession(readSessionConfig(config));
+        return internalSession.executeQueryAsync(query,
+                        config.access(),
+                        readTxConfig(config))
+                .thenCombine(updateBookmarks(internalSession), (x, y) -> x);
 
-        if (config.access() == ClusterMemberAccess.Automatic) {
-            // not implemented yet;
-            return Futures.asCompletionStage(null);
-        } else if (config.access() == ClusterMemberAccess.Readers) {
-            return inst.executeReadAsync(ctx -> executeQueryInCtxAsync(query, ctx), readTxConfig(config))
-                    .thenCombine(updateBookmarks(inst), (x, y) -> x);
-        } else {
-            return inst.executeWriteAsync(ctx -> executeQueryInCtxAsync(query, ctx), readTxConfig(config))
-                    .thenCombine(updateBookmarks(inst), (x, y) -> x);
-        }
     }
 
     private TransactionConfig readTxConfig(DriverQueryConfig config) {
@@ -279,11 +228,22 @@ public class InternalDriver implements Driver {
 
     private SessionConfig readSessionConfig(DriverQueryConfig config) {
         var builder = SessionConfig.builder();
-        builder.withBookmarks(bookmarksHolder.getBookmarks());
+
+        if (config.bookmarks().isPresent()){
+            var b = new HashSet<>(config.bookmarks().get());
+            builder.withBookmarks(b);
+        } else {
+            builder.withBookmarks(this.bookmarksHolder.getBookmarks());
+        }
+        if (config.database().isPresent())
+            builder.withDatabase(config.database().get());
+
         return builder.build();
     }
 
+
     private boolean validateConfig(DriverQueryConfig config) {
+
         return true;
     }
 

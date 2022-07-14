@@ -173,7 +173,7 @@ public class SessionConfig implements Serializable {
          * <p>
          * First transaction in a session will ensure that server hosting is at least as up-to-date as the latest transaction referenced by the supplied
          * bookmarks. The bookmarks can be obtained via {@link Session#lastBookmarks()}, {@link AsyncSession#lastBookmarks()}, and/or {@link
-         * ReactiveSession#lastBookmarks()}.
+         * ReactiveSession#lastBookmarks()}.vf
          *
          * @param bookmarks a series of initial bookmarks. Both {@code null} value and empty array are permitted, and indicate that the bookmarks do not exist
          *                  or are unknown.

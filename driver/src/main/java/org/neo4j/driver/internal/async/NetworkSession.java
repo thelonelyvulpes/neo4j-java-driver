@@ -304,6 +304,10 @@ public class NetworkSession {
         }
     }
 
+    public CompletionStage<Boolean> canAutoRouteQuery() {
+        return this.connectionProvider.supportsAutoQueryRouting();
+    }
+
     /**
      * The {@link NetworkSessionConnectionContext#mode} can be mutable for a session connection context
      */

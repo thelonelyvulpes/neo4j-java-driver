@@ -67,6 +67,7 @@ public class NetworkConnection implements Connection {
     private final ListenerEvent inUseEvent;
 
     private final Long connectionReadTimeout;
+    private final Boolean supportsAutoQuery;
     private ChannelHandler connectionReadTimeoutHandler;
 
     public NetworkConnection(
@@ -88,6 +89,7 @@ public class NetworkConnection implements Connection {
         this.inUseEvent = metricsListener.createListenerEvent();
         this.connectionReadTimeout =
                 ChannelAttributes.connectionReadTimeout(channel).orElse(null);
+        this.supportsAutoQuery = ChannelAttributes.supportsAutoRouteQuery(channel);
         metricsListener.afterConnectionCreated(poolId(this.channel), this.inUseEvent);
     }
 
@@ -115,6 +117,11 @@ public class NetworkConnection implements Connection {
         if (verifyOpen(null, null)) {
             flushInEventLoop();
         }
+    }
+
+    @Override
+    public boolean supportsAutoRoutingQuery() {
+        return supportsAutoQuery;
     }
 
     @Override

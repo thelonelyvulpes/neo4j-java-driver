@@ -47,7 +47,8 @@ public class DirectConnectionProvider implements ConnectionProvider {
         CompletableFuture<DatabaseName> databaseNameFuture = context.databaseNameFuture();
         databaseNameFuture.complete(DatabaseNameUtil.defaultDatabase());
         return acquireConnection()
-                .thenApply(connection -> new DirectConnection(
+                .thenApply(connection ->
+                        new DirectConnection(
                         connection,
                         Futures.joinNowOrElseThrow(databaseNameFuture, PENDING_DATABASE_NAME_EXCEPTION_SUPPLIER),
                         context.mode(),
@@ -69,6 +70,14 @@ public class DirectConnectionProvider implements ConnectionProvider {
         return acquireConnection().thenCompose(conn -> {
             boolean supportsMultiDatabase = supportsMultiDatabase(conn);
             return conn.release().thenApply(ignored -> supportsMultiDatabase);
+        });
+    }
+
+    @Override
+    public CompletionStage<Boolean> supportsAutoQueryRouting() {
+        return acquireConnection().thenCompose(conn -> {
+            var supportsAuto = conn.supportsAutoRoutingQuery();
+            return conn.release().thenApply((_x) -> supportsAuto);
         });
     }
 

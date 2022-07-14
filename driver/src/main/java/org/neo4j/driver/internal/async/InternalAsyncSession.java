@@ -205,8 +205,14 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
      }
 
     private CompletionStage<QueryResult> ValidateCanRouteAndExecute(Query query, TransactionConfig txConfig) {
-        this.session.canAutomaticallyRouteAsync()
-
+        return this.session
+                .canAutoRouteQuery()
+                .thenCompose(canRoute -> {
+                    if (canRoute) {
+                        return executeReadAsync(x -> executeQueryInCtxAsync(query, x), txConfig);
+                    }
+                    throw new IllegalStateException("Server does not support Automatic ClusterMemberAccess");
+                });
     }
 
 

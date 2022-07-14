@@ -38,6 +38,7 @@ public class HelloResponseHandler implements ResponseHandler {
     private static final String CONNECTION_ID_METADATA_KEY = "connection_id";
     public static final String CONFIGURATION_HINTS_KEY = "hints";
     public static final String CONNECTION_RECEIVE_TIMEOUT_SECONDS_KEY = "connection.recv_timeout_seconds";
+    public static final String SERVER_SIDE_ROUTING = "server_side_routing";
 
     private final ChannelPromise connectionInitializedPromise;
     private final Channel channel;
@@ -95,7 +96,7 @@ public class HelloResponseHandler implements ResponseHandler {
     }
 
     private static boolean extractServerSideRouting(Map<String, Value> metadata) {
-        Value value = metadata.get("ServerSideRouting");
+        Value value = metadata.get(SERVER_SIDE_ROUTING);
         if (value == null || value.isNull()) {
             return false;
         }

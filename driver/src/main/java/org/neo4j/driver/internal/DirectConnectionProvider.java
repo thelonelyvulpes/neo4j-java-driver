@@ -76,7 +76,7 @@ public class DirectConnectionProvider implements ConnectionProvider {
     @Override
     public CompletionStage<Boolean> supportsAutoQueryRouting() {
         return acquireConnection().thenCompose(conn -> {
-            var supportsAuto = conn.supportsAutoRoutingQuery();
+            var supportsAuto = conn.supportsAutoRoutedQuery();
             return conn.release().thenApply((_x) -> supportsAuto);
         });
     }

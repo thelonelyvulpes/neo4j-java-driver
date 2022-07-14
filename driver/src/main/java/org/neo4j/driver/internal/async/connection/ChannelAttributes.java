@@ -165,7 +165,7 @@ public final class ChannelAttributes {
     }
 
     public static Boolean supportsAutoRouteQuery(Channel channel) {
-        return Optional.ofNullable(get(channel, SUPPORTS_AUTO_ROUTING_QUERY));
+        return get(channel, SUPPORTS_AUTO_ROUTING_QUERY);
     }
 
     private static <T> void set(Channel channel, AttributeKey<T> key, T value) {

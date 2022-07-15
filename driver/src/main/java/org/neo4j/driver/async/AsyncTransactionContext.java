@@ -18,7 +18,9 @@
  */
 package org.neo4j.driver.async;
 
+import org.neo4j.driver.internal.async.AsyncTransactionQueryRunner;
+
 /**
  * A context for running queries within transaction.
  */
-public interface AsyncTransactionContext extends AsyncQueryRunner {}
+public interface AsyncTransactionContext extends AsyncQueryRunner, AsyncTransactionQueryRunner {}

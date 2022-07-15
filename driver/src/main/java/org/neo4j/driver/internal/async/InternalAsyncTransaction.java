@@ -18,11 +18,16 @@
  */
 package org.neo4j.driver.internal.async;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.neo4j.driver.Query;
+import org.neo4j.driver.QueryResult;
+import org.neo4j.driver.Record;
 import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.ResultCursor;
+
+import static org.neo4j.driver.internal.util.Futures.getNow;
 
 public class InternalAsyncTransaction extends AsyncAbstractQueryRunner implements AsyncTransaction {
     private final UnmanagedTransaction tx;
@@ -59,4 +64,29 @@ public class InternalAsyncTransaction extends AsyncAbstractQueryRunner implement
     public boolean isOpen() {
         return tx.isOpen();
     }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query) {
+        return queryAsync(new Query(query));
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters) {
+        return queryAsync(new Query(query, parameters));
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(Query query) {
+        var cursorFuture = this.runAsync(query);
+        var listFuture = cursorFuture.thenCompose(ResultCursor::listAsync);
+        var consumeFuture = listFuture.thenCompose(_x -> cursorFuture.thenCompose(ResultCursor::consumeAsync));
+        return consumeFuture.thenCombine(
+                listFuture,
+                (summaryCompletionStage, listCompletionStage) ->
+                        new QueryResult(listCompletionStage.toArray(new Record[0]),
+                                summaryCompletionStage,
+                                getNow(cursorFuture).keys().toArray(new String[0])));
+
+    }
 }
+

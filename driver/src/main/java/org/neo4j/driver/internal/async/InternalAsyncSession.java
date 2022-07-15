@@ -247,8 +247,8 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
                                                      TransactionConfig txConfig) {
         return switch (clusterMemberAccess) {
             case Automatic -> ValidateCanRouteAndExecute(query, txConfig);
-            case Readers -> executeReadAsync(x -> executeQueryInCtxAsync(query, x), txConfig);
-            case Writers -> executeWriteAsync(x -> executeQueryInCtxAsync(query, x), txConfig);
+            case Readers -> executeReadAsync(x -> x.queryAsync(query), txConfig);
+            case Writers -> executeWriteAsync(x -> x.queryAsync(query), txConfig);
         };
     }
 
@@ -257,21 +257,10 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
                 .canAutoRouteQuery()
                 .thenCompose(canRoute -> {
                     if (canRoute) {
-                        return executeReadAsync(x -> executeQueryInCtxAsync(query, x), txConfig);
+                        return executeReadAsync(x -> x.queryAsync(query), txConfig);
                     }
                     throw new IllegalStateException("Server does not support Automatic ClusterMemberAccess");
                 });
     }
 
-    private CompletionStage<QueryResult> executeQueryInCtxAsync(Query query, AsyncTransactionContext ctx) {
-        var cursorFuture = ctx.runAsync(query);
-        var listFuture = cursorFuture.thenCompose(ResultCursor::listAsync);
-        var consumeFuture = listFuture.thenCompose(_x -> cursorFuture.thenCompose(ResultCursor::consumeAsync));
-        return consumeFuture.thenCombine(
-                        listFuture,
-                        (summaryCompletionStage, listCompletionStage) ->
-                                new QueryResult(listCompletionStage.toArray(new Record[0]),
-                                        summaryCompletionStage,
-                                        getNow(cursorFuture).keys().toArray(new String[0])));
-    }
 }

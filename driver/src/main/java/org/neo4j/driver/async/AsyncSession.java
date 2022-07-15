@@ -410,21 +410,11 @@ public interface AsyncSession extends AsyncQueryRunner {
      */
     CompletionStage<Void> closeAsync();
 
-    CompletionStage<Boolean> supportsAutomaticClusterMemberAccess();
-
     CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess);
-
-    CompletionStage<QueryResult> queryAsync(
-            String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
-
+    CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
     CompletionStage<QueryResult> queryAsync(Query query, ClusterMemberAccess clusterMemberAccess);
-
-    CompletionStage<QueryResult> queryAsync(String query, DriverQueryConfig config);
-
-    CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, DriverQueryConfig config);
-
-    CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config);
-
-    CompletionStage<QueryResult> queryAsync(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
+    CompletionStage<QueryResult> queryAsync(String query, SessionQueryConfig config);
+    CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, SessionQueryConfig config);
+    CompletionStage<QueryResult> queryAsync(Query query, SessionQueryConfig config);
 
 }

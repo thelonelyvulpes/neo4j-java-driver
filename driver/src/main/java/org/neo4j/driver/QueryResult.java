@@ -9,7 +9,7 @@ public record QueryResult(Record[] records, ResultSummary summary, String[] keys
         throw new IllegalStateException("Result's records did not contain only a single record");
     }
 
-    public <TResult> TResult scalar() throws IllegalStateException, ClassCastException {
+    public Value scalar() throws IllegalStateException, ClassCastException {
         if (records.length != 1) {
             throw new IllegalStateException("Result's records did not contain only a single record");
         }
@@ -18,6 +18,6 @@ public record QueryResult(Record[] records, ResultSummary summary, String[] keys
             throw new IllegalStateException("Result's records contained more than a single column.");
         }
 
-        return (TResult) record.get(0);
+        return record.get(0);
     }
 }

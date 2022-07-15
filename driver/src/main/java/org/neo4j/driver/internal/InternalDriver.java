@@ -201,9 +201,10 @@ public class InternalDriver implements Driver {
             throw new IllegalStateException("Config specified was not valid.");
         }
         var internalSession = (InternalAsyncSession) asyncSession(readSessionConfig(config));
-        return internalSession
-                .executeQueryAsync(query, config.access(), readTxConfig(config))
-                .thenCombine(updateBookmarks(internalSession), (queryResult, _void) -> queryResult);
+        var queryFuture =  internalSession
+                .executeQueryAsync(query, config.access(), readTxConfig(config));
+        var bookmarkFuture = queryFuture.thenRun(() -> updateBookmarks(internalSession));
+        return bookmarkFuture.thenCombine(queryFuture, (_x, result) -> result);
     }
 
     private TransactionConfig readTxConfig(DriverQueryConfig config) {
@@ -213,15 +214,14 @@ public class InternalDriver implements Driver {
     private SessionConfig readSessionConfig(DriverQueryConfig config) {
         SessionConfig.Builder builder = SessionConfig.builder();
 
-        if (config.bookmarks().isPresent()) {
-            Set<Bookmark> b = new HashSet<>(config.bookmarks().get());
-            builder.withBookmarks(b);
+        if (config.bookmarks() != null) {
+            builder.withBookmarks(config.bookmarks());
         } else {
             builder.withBookmarks(this.bookmarksHolder.getBookmarks());
         }
 
-        if (config.database().isPresent())
-            builder.withDatabase(config.database().get());
+        if (config.database() != null)
+            builder.withDatabase(config.database());
 
         return builder.build();
     }
@@ -283,44 +283,22 @@ public class InternalDriver implements Driver {
         return this.query(new Query(query, parameters), config);
     }
 
-    private CompletionStage<Void> updateBookmarks(AsyncSession asyncSession) {
-        this.bookmarksHolder.setBookmarks(asyncSession.lastBookmarks());
-        return asyncSession.closeAsync();
-    }
-
     @Override
     public QueryResult query(Query query, DriverQueryConfig config) {
         return Futures.blockingGet(this.queryAsync(query, config));
     }
 
-    @Override
-    public QueryResult query(String query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction) {
-        return this.query(new Query(query), configBuilderFunction);
+    private CompletionStage<Void> updateBookmarks(AsyncSession asyncSession) {
+        this.bookmarksHolder.setBookmarks(asyncSession.lastBookmarks());
+        return asyncSession.closeAsync();
     }
 
-    @Override
-    public QueryResult query(String query, Map<String, Object> parameters, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction) {
-        return this.query(new Query(query, parameters), configBuilderFunction);
-    }
-
-    @Override
-    public CompletionStage<QueryResult> queryAsync(String query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction) {
-        return this.queryAsync(new Query(query), configBuilderFunction);
-    }
-
-    @Override
-    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction) {
-        return this.queryAsync(new Query(query, parameters), configBuilderFunction);
-    }
-
-    @Override
-    public QueryResult query(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilder) {
+    private QueryResult query(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilder) {
         return this.query(
                 query, configBuilder.apply(DriverQueryConfig.builder()).build());
     }
 
-    @Override
-    public CompletionStage<QueryResult> queryAsync(
+    private CompletionStage<QueryResult> queryAsync(
             Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilder) {
         return this.queryAsync(
                 query, configBuilder.apply(DriverQueryConfig.builder()).build());

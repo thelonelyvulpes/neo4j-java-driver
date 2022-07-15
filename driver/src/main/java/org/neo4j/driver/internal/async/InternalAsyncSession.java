@@ -19,8 +19,7 @@
 package org.neo4j.driver.internal.async;
 
 import static java.util.Collections.emptyMap;
-import static org.neo4j.driver.internal.util.Futures.completedWithNull;
-import static org.neo4j.driver.internal.util.Futures.failedFuture;
+import static org.neo4j.driver.internal.util.Futures.*;
 
 import java.util.HashSet;
 import java.util.List;
@@ -28,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
@@ -68,6 +68,54 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
     @Override
     public CompletionStage<Void> closeAsync() {
         return session.closeAsync();
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess) {
+        return this.queryAsync(new Query(query), x -> x.withClusterMemberAccess(clusterMemberAccess));
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess) {
+        return this.queryAsync(new Query(query, parameters), x -> x.withClusterMemberAccess(clusterMemberAccess));
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(Query query, ClusterMemberAccess clusterMemberAccess) {
+        return this.queryAsync(query, x -> x.withClusterMemberAccess(clusterMemberAccess));
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, SessionQueryConfig config) {
+        return this.queryAsync(new Query(query), config);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, SessionQueryConfig config) {
+        return this.queryAsync(new Query(query, parameters), config);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(Query query, SessionQueryConfig config) {
+        return this.executeQueryAsync(query, config.clusterMemberAccess(), extractTxConfig(config));
+    }
+
+    private TransactionConfig extractTxConfig(SessionQueryConfig config) {
+        var txCfgBuilder = TransactionConfig.builder();
+
+        if (config.metadata() != null) {
+            txCfgBuilder.withMetadata(config.metadata());
+        }
+
+        if (config.timeout() != null) {
+            txCfgBuilder.withTimeout(config.timeout());
+        }
+
+        return txCfgBuilder.build();
+    }
+
+    private CompletionStage<QueryResult> queryAsync(Query query, Function<SessionQueryConfigBuilder, SessionQueryConfigBuilder> configBuilderFunction) {
+        return queryAsync(query, configBuilderFunction.apply(new SessionQueryConfigBuilder()).build());
     }
 
     @Override
@@ -202,7 +250,7 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
             case Readers -> executeReadAsync(x -> executeQueryInCtxAsync(query, x), txConfig);
             case Writers -> executeWriteAsync(x -> executeQueryInCtxAsync(query, x), txConfig);
         };
-     }
+    }
 
     private CompletionStage<QueryResult> ValidateCanRouteAndExecute(Query query, TransactionConfig txConfig) {
         return this.session
@@ -215,20 +263,15 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
                 });
     }
 
-
     private CompletionStage<QueryResult> executeQueryInCtxAsync(Query query, AsyncTransactionContext ctx) {
         var cursorFuture = ctx.runAsync(query);
-        return cursorFuture
-                .thenApplyAsync(ResultCursor::listAsync)
-                .thenCombineAsync(
-                        cursorFuture.thenApplyAsync(ResultCursor::consumeAsync),
-                        (listCompletionStage, summaryCompletionStage) -> new Object() {
-                            final ResultSummary summary = Futures.getNow(summaryCompletionStage);
-                            final List<Record> records = Futures.getNow(listCompletionStage);
-                        })
-                .thenCombine(
-                        cursorFuture.thenApply(ResultCursor::keys),
-                        (x, y) ->
-                                new QueryResult(x.records.toArray(new Record[0]), x.summary, y.toArray(new String[0])));
+        var listFuture = cursorFuture.thenCompose(ResultCursor::listAsync);
+        var consumeFuture = listFuture.thenCompose(_x -> cursorFuture.thenCompose(ResultCursor::consumeAsync));
+        return consumeFuture.thenCombine(
+                        listFuture,
+                        (summaryCompletionStage, listCompletionStage) ->
+                                new QueryResult(listCompletionStage.toArray(new Record[0]),
+                                        summaryCompletionStage,
+                                        getNow(cursorFuture).keys().toArray(new String[0])));
     }
 }

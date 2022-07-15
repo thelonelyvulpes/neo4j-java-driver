@@ -249,10 +249,6 @@ public interface Driver extends AutoCloseable {
     CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, DriverQueryConfig config);
     CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config);
 
-    CompletionStage<QueryResult> queryAsync(String query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
-    CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
-    CompletionStage<QueryResult> queryAsync(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
-
     QueryResult query(String query, ClusterMemberAccess clusterMemberAccess);
     QueryResult query(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
     QueryResult query(Query query, ClusterMemberAccess clusterMemberAccess);
@@ -260,8 +256,4 @@ public interface Driver extends AutoCloseable {
     QueryResult query(String query, DriverQueryConfig config);
     QueryResult query(String query, Map<String, Object> parameters, DriverQueryConfig config);
     QueryResult query(Query query, DriverQueryConfig config);
-
-    QueryResult query(String query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
-    QueryResult query(String query, Map<String, Object> parameters, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
-    QueryResult query(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
 }

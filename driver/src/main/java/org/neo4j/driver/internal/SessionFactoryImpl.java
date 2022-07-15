@@ -108,6 +108,10 @@ public class SessionFactoryImpl implements SessionFactory {
         return connectionProvider.supportsMultiDb();
     }
 
+    @Override
+    public CompletionStage<Boolean> supportsAutomaticQueryRouting() {
+        return connectionProvider.supportsAutoQueryRouting();
+    }
     /**
      * Get the underlying connection provider.
      * <p>

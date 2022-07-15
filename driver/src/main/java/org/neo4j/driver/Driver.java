@@ -21,6 +21,8 @@ package org.neo4j.driver;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
+
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.reactive.ReactiveSession;
@@ -235,28 +237,31 @@ public interface Driver extends AutoCloseable {
      */
     CompletionStage<Boolean> supportsMultiDbAsync();
 
-    CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess);
+    Boolean supportsAutomaticClusterMemberAccess();
+    CompletionStage<Boolean> supportsAutomaticClusterMemberAccessAsync();
 
+    CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess);
     CompletionStage<QueryResult> queryAsync(
             String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
-
     CompletionStage<QueryResult> queryAsync(Query query, ClusterMemberAccess clusterMemberAccess);
 
     CompletionStage<QueryResult> queryAsync(String query, DriverQueryConfig config);
-
     CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, DriverQueryConfig config);
-
     CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config);
 
+    CompletionStage<QueryResult> queryAsync(String query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
+    CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
+    CompletionStage<QueryResult> queryAsync(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
+
     QueryResult query(String query, ClusterMemberAccess clusterMemberAccess);
-
     QueryResult query(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
-
     QueryResult query(Query query, ClusterMemberAccess clusterMemberAccess);
 
     QueryResult query(String query, DriverQueryConfig config);
-
     QueryResult query(String query, Map<String, Object> parameters, DriverQueryConfig config);
-
     QueryResult query(Query query, DriverQueryConfig config);
+
+    QueryResult query(String query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
+    QueryResult query(String query, Map<String, Object> parameters, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
+    QueryResult query(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
 }

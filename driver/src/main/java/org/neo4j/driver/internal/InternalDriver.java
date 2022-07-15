@@ -24,6 +24,7 @@ import java.awt.print.Book;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
@@ -149,6 +150,16 @@ public class InternalDriver implements Driver {
     }
 
     @Override
+    public Boolean supportsAutomaticClusterMemberAccess() {
+        return Futures.blockingGet(supportsAutomaticClusterMemberAccessAsync());
+    }
+
+    @Override
+    public CompletionStage<Boolean> supportsAutomaticClusterMemberAccessAsync() {
+        return sessionFactory.supportsAutomaticQueryRouting();
+    }
+
+    @Override
     public void verifyConnectivity() {
         Futures.blockingGet(verifyConnectivityAsync());
     }
@@ -183,6 +194,42 @@ public class InternalDriver implements Driver {
             throw driverCloseException();
         }
     }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config) {
+        if (!validateConfig(config)) {
+            throw new IllegalStateException("Config specified was not valid.");
+        }
+        var internalSession = (InternalAsyncSession) asyncSession(readSessionConfig(config));
+        return internalSession
+                .executeQueryAsync(query, config.access(), readTxConfig(config))
+                .thenCombine(updateBookmarks(internalSession), (queryResult, _void) -> queryResult);
+    }
+
+    private TransactionConfig readTxConfig(DriverQueryConfig config) {
+        return TransactionConfig.builder().build();
+    }
+
+    private SessionConfig readSessionConfig(DriverQueryConfig config) {
+        SessionConfig.Builder builder = SessionConfig.builder();
+
+        if (config.bookmarks().isPresent()) {
+            Set<Bookmark> b = new HashSet<>(config.bookmarks().get());
+            builder.withBookmarks(b);
+        } else {
+            builder.withBookmarks(this.bookmarksHolder.getBookmarks());
+        }
+
+        if (config.database().isPresent())
+            builder.withDatabase(config.database().get());
+
+        return builder.build();
+    }
+
+    private boolean validateConfig(DriverQueryConfig config) {
+        return true;
+    }
+
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess) {
@@ -246,50 +293,36 @@ public class InternalDriver implements Driver {
         return Futures.blockingGet(this.queryAsync(query, config));
     }
 
-    private QueryResult query(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilder) {
+    @Override
+    public QueryResult query(String query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction) {
+        return this.query(new Query(query), configBuilderFunction);
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction) {
+        return this.query(new Query(query, parameters), configBuilderFunction);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction) {
+        return this.queryAsync(new Query(query), configBuilderFunction);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction) {
+        return this.queryAsync(new Query(query, parameters), configBuilderFunction);
+    }
+
+    @Override
+    public QueryResult query(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilder) {
         return this.query(
                 query, configBuilder.apply(DriverQueryConfig.builder()).build());
     }
 
-    private CompletionStage<QueryResult> queryAsync(
+    @Override
+    public CompletionStage<QueryResult> queryAsync(
             Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilder) {
         return this.queryAsync(
                 query, configBuilder.apply(DriverQueryConfig.builder()).build());
-    }
-
-    @Override
-    public CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config) {
-        if (!validateConfig(config)) {
-            throw new IllegalStateException("Config specified was not valid.");
-        }
-        var internalSession = (InternalAsyncSession) asyncSession(readSessionConfig(config));
-        return internalSession
-                .executeQueryAsync(query, config.access(), readTxConfig(config))
-                .thenCombine(updateBookmarks(internalSession), (queryResult, _void) -> queryResult);
-    }
-
-    private TransactionConfig readTxConfig(DriverQueryConfig config) {
-        return TransactionConfig.builder().build();
-    }
-
-    private SessionConfig readSessionConfig(DriverQueryConfig config) {
-        var builder = SessionConfig.builder();
-
-        if (config.bookmarks().isPresent()) {
-            var b = new HashSet<>(config.bookmarks().get());
-            builder.withBookmarks(b);
-        } else {
-            builder.withBookmarks(this.bookmarksHolder.getBookmarks());
-        }
-
-        if (config.database().isPresent())
-            builder.withDatabase(config.database().get());
-
-        return builder.build();
-    }
-
-    private boolean validateConfig(DriverQueryConfig config) {
-
-        return true;
     }
 }

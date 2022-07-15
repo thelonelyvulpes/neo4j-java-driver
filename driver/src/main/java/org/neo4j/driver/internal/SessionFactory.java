@@ -30,4 +30,6 @@ public interface SessionFactory {
     CompletionStage<Void> close();
 
     CompletionStage<Boolean> supportsMultiDb();
+
+    CompletionStage<Boolean> supportsAutomaticQueryRouting();
 }

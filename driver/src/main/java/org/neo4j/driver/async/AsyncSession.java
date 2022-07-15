@@ -24,13 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
-import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.Bookmark;
-import org.neo4j.driver.Query;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Transaction;
-import org.neo4j.driver.TransactionConfig;
-import org.neo4j.driver.Values;
+
+import org.neo4j.driver.*;
 
 /**
  * Provides a context of work for database interactions.
@@ -414,4 +409,22 @@ public interface AsyncSession extends AsyncQueryRunner {
      * @return a {@link CompletionStage completion stage} that represents the asynchronous close.
      */
     CompletionStage<Void> closeAsync();
+
+    CompletionStage<Boolean> supportsAutomaticClusterMemberAccess();
+
+    CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess);
+
+    CompletionStage<QueryResult> queryAsync(
+            String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
+
+    CompletionStage<QueryResult> queryAsync(Query query, ClusterMemberAccess clusterMemberAccess);
+
+    CompletionStage<QueryResult> queryAsync(String query, DriverQueryConfig config);
+
+    CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, DriverQueryConfig config);
+
+    CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config);
+
+    CompletionStage<QueryResult> queryAsync(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilderFunction);
+
 }

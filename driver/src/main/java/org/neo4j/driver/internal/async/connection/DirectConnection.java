@@ -135,7 +135,7 @@ public class DirectConnection implements Connection {
     }
 
     @Override
-    public boolean supportsAutoRoutedQuery() {
+    public boolean supportsAutoRoutingQuery() {
         return true;
     }
 }

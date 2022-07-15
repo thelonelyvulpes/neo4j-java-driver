@@ -195,9 +195,9 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
     }
 
     public CompletionStage<QueryResult> executeQueryAsync(Query query,
-                                                     ClusterMemberAccess cma,
+                                                     ClusterMemberAccess clusterMemberAccess,
                                                      TransactionConfig txConfig) {
-        return switch (cma) {
+        return switch (clusterMemberAccess) {
             case Automatic -> ValidateCanRouteAndExecute(query, txConfig);
             case Readers -> executeReadAsync(x -> executeQueryInCtxAsync(query, x), txConfig);
             case Writers -> executeWriteAsync(x -> executeQueryInCtxAsync(query, x), txConfig);

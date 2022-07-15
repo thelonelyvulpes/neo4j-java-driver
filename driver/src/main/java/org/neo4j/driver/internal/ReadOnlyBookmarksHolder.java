@@ -40,4 +40,9 @@ public class ReadOnlyBookmarksHolder implements BookmarksHolder {
     public void setBookmark(Bookmark bookmark) {
         // NO_OP
     }
+
+    @Override
+    public void setBookmarks(Set<Bookmark> bookmarks) {
+        // NO_OP
+    }
 }

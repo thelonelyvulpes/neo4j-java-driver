@@ -195,8 +195,51 @@ public class LoadBalancer implements ConnectionProvider {
         });
     }
 
+
+
     public RoutingTableRegistry getRoutingTableRegistry() {
         return routingTables;
+    }
+
+    @Override
+    public CompletionStage<Boolean> supportsAutoQueryRouting() {
+            List<BoltServerAddress> addresses;
+
+            try {
+                addresses = rediscovery.resolve();
+            } catch (Throwable error) {
+                return failedFuture(error);
+            }
+            CompletableFuture<Boolean> result = completedWithNull();
+            Throwable baseError = new ServiceUnavailableException(
+                    "Failed to perform multi-databases feature detection with the following servers: " + addresses);
+
+            for (BoltServerAddress address : addresses) {
+                result = onErrorContinue(result, baseError, completionError -> {
+                    // We fail fast on security errors
+                    Throwable error = completionExceptionCause(completionError);
+                    if (error instanceof SecurityException) {
+                        return failedFuture(error);
+                    }
+                    return supportsAutoQueryRouting(address);
+                });
+            }
+            return onErrorContinue(result, baseError, completionError -> {
+                // If we failed with security errors, then we rethrow the security error out, otherwise we throw the chained
+                // errors.
+                Throwable error = completionExceptionCause(completionError);
+                if (error instanceof SecurityException) {
+                    return failedFuture(error);
+                }
+                return failedFuture(baseError);
+            });
+    }
+
+    private CompletionStage<Boolean> supportsAutoQueryRouting(BoltServerAddress address) {
+        return connectionPool.acquire(address).thenComposeAsync(con -> {
+            var result = con.supportsAutoRoutingQuery();
+            return con.release().thenApplyAsync(_x -> result);
+        });
     }
 
     private CompletionStage<Boolean> supportsMultiDb(BoltServerAddress address) {

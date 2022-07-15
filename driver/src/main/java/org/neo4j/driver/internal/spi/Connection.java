@@ -68,5 +68,5 @@ public interface Connection {
 
     void flush();
 
-    boolean supportsAutoRoutedQuery();
+    boolean supportsAutoRoutingQuery();
 }

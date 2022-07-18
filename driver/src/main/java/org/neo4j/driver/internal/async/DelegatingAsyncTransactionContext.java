@@ -20,10 +20,9 @@ package org.neo4j.driver.internal.async;
 
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
-import org.neo4j.driver.Query;
-import org.neo4j.driver.QueryResult;
+
+import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.Value;
 import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.AsyncTransactionContext;
 import org.neo4j.driver.async.ResultCursor;
@@ -73,5 +72,20 @@ final class DelegatingAsyncTransactionContext implements AsyncTransactionContext
     @Override
     public CompletionStage<QueryResult> queryAsync(Query query) {
         return delegate.queryAsync(query);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, QueryConfig config) {
+        return delegate.queryAsync(query, config);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, QueryConfig config) {
+        return delegate.queryAsync(query, config);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(Query query, QueryConfig config) {
+        return delegate.queryAsync(query, config);
     }
 }

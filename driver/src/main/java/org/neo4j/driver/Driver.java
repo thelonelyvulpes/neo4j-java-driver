@@ -256,4 +256,6 @@ public interface Driver extends AutoCloseable {
     QueryResult query(String query, DriverQueryConfig config);
     QueryResult query(String query, Map<String, Object> parameters, DriverQueryConfig config);
     QueryResult query(Query query, DriverQueryConfig config);
+
+
 }

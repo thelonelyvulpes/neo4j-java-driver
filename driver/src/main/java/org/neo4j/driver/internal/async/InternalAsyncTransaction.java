@@ -22,10 +22,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.neo4j.driver.Query;
+import org.neo4j.driver.QueryConfig;
 import org.neo4j.driver.QueryResult;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.ResultCursor;
+import org.neo4j.driver.summary.ResultSummary;
 
 import static org.neo4j.driver.internal.util.Futures.getNow;
 
@@ -67,17 +69,39 @@ public class InternalAsyncTransaction extends AsyncAbstractQueryRunner implement
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query) {
-        return queryAsync(new Query(query));
+        return queryAsync(new Query(query), new QueryConfig(false));
     }
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters) {
-        return queryAsync(new Query(query, parameters));
+        return queryAsync(new Query(query, parameters), new QueryConfig(false));
     }
 
     @Override
     public CompletionStage<QueryResult> queryAsync(Query query) {
+        return this.queryAsync(query, new QueryConfig(false));
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, QueryConfig config) {
+        return this.queryAsync(new Query(query), config);
+
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, QueryConfig config) {
+        return this.queryAsync(new Query(query, parameters), config);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(Query query, QueryConfig config) {
         var cursorFuture = this.runAsync(query);
+        if (config.skipRecords()) {
+            return cursorFuture
+                    .thenCompose(ResultCursor::consumeAsync)
+                    .thenApply(value -> new QueryResult(new Record[0], value, new String[0]));
+        }
+
         var listFuture = cursorFuture.thenCompose(ResultCursor::listAsync);
         var consumeFuture = listFuture.thenCompose(_x -> cursorFuture.thenCompose(ResultCursor::consumeAsync));
         return consumeFuture.thenCombine(
@@ -86,7 +110,6 @@ public class InternalAsyncTransaction extends AsyncAbstractQueryRunner implement
                         new QueryResult(listCompletionStage.toArray(new Record[0]),
                                 summaryCompletionStage,
                                 getNow(cursorFuture).keys().toArray(new String[0])));
-
     }
 }
 

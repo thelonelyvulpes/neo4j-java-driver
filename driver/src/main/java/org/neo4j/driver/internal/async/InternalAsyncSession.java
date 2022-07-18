@@ -97,21 +97,7 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
 
     @Override
     public CompletionStage<QueryResult> queryAsync(Query query, SessionQueryConfig config) {
-        return this.executeQueryAsync(query, config.clusterMemberAccess(), extractTxConfig(config));
-    }
-
-    private TransactionConfig extractTxConfig(SessionQueryConfig config) {
-        var txCfgBuilder = TransactionConfig.builder();
-
-        if (config.metadata() != null) {
-            txCfgBuilder.withMetadata(config.metadata());
-        }
-
-        if (config.timeout() != null) {
-            txCfgBuilder.withTimeout(config.timeout());
-        }
-
-        return txCfgBuilder.build();
+        return this.executeQueryAsync(query, config.clusterMemberAccess(), config.transactionConfig(), config.queryConfig());
     }
 
     private CompletionStage<QueryResult> queryAsync(Query query, Function<SessionQueryConfigBuilder, SessionQueryConfigBuilder> configBuilderFunction) {
@@ -244,20 +230,20 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
 
     public CompletionStage<QueryResult> executeQueryAsync(Query query,
                                                      ClusterMemberAccess clusterMemberAccess,
-                                                     TransactionConfig txConfig) {
+                                                     TransactionConfig txConfig, QueryConfig queryConfig) {
         return switch (clusterMemberAccess) {
-            case Automatic -> ValidateCanRouteAndExecute(query, txConfig);
-            case Readers -> executeReadAsync(x -> x.queryAsync(query), txConfig);
-            case Writers -> executeWriteAsync(x -> x.queryAsync(query), txConfig);
+            case Automatic -> ValidateCanRouteAndExecute(query, txConfig, queryConfig);
+            case Readers -> executeReadAsync(x -> x.queryAsync(query, queryConfig), txConfig);
+            case Writers -> executeWriteAsync(x -> x.queryAsync(query, queryConfig), txConfig);
         };
     }
 
-    private CompletionStage<QueryResult> ValidateCanRouteAndExecute(Query query, TransactionConfig txConfig) {
+    private CompletionStage<QueryResult> ValidateCanRouteAndExecute(Query query, TransactionConfig txConfig, QueryConfig queryConfig) {
         return this.session
                 .canAutoRouteQuery()
                 .thenCompose(canRoute -> {
                     if (canRoute) {
-                        return executeReadAsync(x -> x.queryAsync(query), txConfig);
+                        return executeReadAsync(x -> x.queryAsync(query, queryConfig), txConfig);
                     }
                     throw new IllegalStateException("Server does not support Automatic ClusterMemberAccess");
                 });

@@ -202,13 +202,9 @@ public class InternalDriver implements Driver {
         }
         var internalSession = (InternalAsyncSession) asyncSession(readSessionConfig(config));
         var queryFuture =  internalSession
-                .executeQueryAsync(query, config.access(), readTxConfig(config));
+                .executeQueryAsync(query, config.access(), config.transactionConfig(), config.queryConfig());
         var bookmarkFuture = queryFuture.thenRun(() -> updateBookmarks(internalSession));
         return bookmarkFuture.thenCombine(queryFuture, (_x, result) -> result);
-    }
-
-    private TransactionConfig readTxConfig(DriverQueryConfig config) {
-        return TransactionConfig.builder().build();
     }
 
     private SessionConfig readSessionConfig(DriverQueryConfig config) {

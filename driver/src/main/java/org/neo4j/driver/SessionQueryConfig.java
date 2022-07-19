@@ -1,11 +1,14 @@
 package org.neo4j.driver;
 
 import java.util.Map;
+import java.util.function.Function;
 
 public record SessionQueryConfig(
         ClusterMemberAccess clusterMemberAccess,
         java.time.Duration timeout,
         Map<String, Object> metadata,
+        Function<RetryInfo, RetryDelay> retryFunction,
+        long maxRecordCount,
         Boolean skipRecords) {
 
     public static SessionQueryConfigBuilder builder() {
@@ -27,6 +30,7 @@ public record SessionQueryConfig(
     }
 
     public QueryConfig queryConfig() {
-        return new QueryConfig(this.skipRecords);
+        return new QueryConfig(this.maxRecordCount, this.skipRecords);
     }
 }
+

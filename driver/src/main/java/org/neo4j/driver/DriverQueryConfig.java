@@ -4,22 +4,29 @@ package org.neo4j.driver;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 public record DriverQueryConfig(
         ClusterMemberAccess access,
-        Set<Bookmark> bookmarks,
         String database,
+        Set<Bookmark> bookmarks,
         Integer maxRetries,
         Duration timeout,
         Map<String, Object> metadata,
+        Integer maxRecordCount,
         Boolean skipRecords
         ) {
+    public static final Function<RetryInfo, RetryDelay> transientFunctions = info ->
+            info.attempts() > info.maxRetry()
+                    ? new RetryDelay(true, Duration.ofMillis(info.attempts() * 100))
+                    : new RetryDelay(false, Duration.ZERO);
+
     public static DriverQueryConfigBuilder builder() {
         return new DriverQueryConfigBuilder();
     }
 
     public QueryConfig queryConfig() {
-        return new QueryConfig(skipRecords);
+        return new QueryConfig(this.maxRecordCount, skipRecords);
     }
 
     public TransactionConfig transactionConfig() {

@@ -3,6 +3,7 @@ package org.neo4j.driver;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 public class DriverQueryConfigBuilder {
     private ClusterMemberAccess access = ClusterMemberAccess.Automatic;
@@ -12,6 +13,8 @@ public class DriverQueryConfigBuilder {
     private Duration timeout = null;
     private Boolean skipRecords = false;
     private Map<String, Object> metadata = null;
+    private int maxRecordCount;
+    private Function<RetryInfo, RetryDelay> retryFunction;
 
     public DriverQueryConfigBuilder withClusterMemberAccess(ClusterMemberAccess clusterMemberAccess) {
         this.access = clusterMemberAccess;
@@ -43,19 +46,30 @@ public class DriverQueryConfigBuilder {
         return this;
     }
 
+    public DriverQueryConfigBuilder withMaxRecordCount(int maxRecordCount) {
+        this.maxRecordCount = maxRecordCount;
+        return this;
+    }
+
     public DriverQueryConfigBuilder withSkipRecords(boolean skipRecords){
         this.skipRecords = skipRecords;
+        return this;
+    }
+
+    public DriverQueryConfigBuilder withRetryFunction(Function<RetryInfo, RetryDelay> retryFunction){
+        this.retryFunction = retryFunction;
         return this;
     }
 
 
     public DriverQueryConfig build() {
         return new DriverQueryConfig(access,
-                bookmarks,
                 database,
+                bookmarks,
                 maxRetries,
                 timeout,
                 metadata,
+                maxRecordCount,
                 skipRecords
                 );
     }

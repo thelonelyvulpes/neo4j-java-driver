@@ -27,7 +27,6 @@ import org.neo4j.driver.QueryResult;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.ResultCursor;
-import org.neo4j.driver.summary.ResultSummary;
 
 import static org.neo4j.driver.internal.util.Futures.getNow;
 
@@ -69,17 +68,17 @@ public class InternalAsyncTransaction extends AsyncAbstractQueryRunner implement
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query) {
-        return queryAsync(new Query(query), new QueryConfig(false));
+        return queryAsync(new Query(query), new QueryConfig(this.maxRecordCount, false));
     }
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters) {
-        return queryAsync(new Query(query, parameters), new QueryConfig(false));
+        return queryAsync(new Query(query, parameters), new QueryConfig(this.maxRecordCount, false));
     }
 
     @Override
     public CompletionStage<QueryResult> queryAsync(Query query) {
-        return this.queryAsync(query, new QueryConfig(false));
+        return this.queryAsync(query, new QueryConfig(this.maxRecordCount, false));
     }
 
     @Override

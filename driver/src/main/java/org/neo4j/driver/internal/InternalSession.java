@@ -22,15 +22,10 @@ import static java.util.Collections.emptyMap;
 
 import java.util.Map;
 import java.util.Set;
-import org.neo4j.driver.AccessMode;
-import org.neo4j.driver.Bookmark;
-import org.neo4j.driver.Query;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.Transaction;
-import org.neo4j.driver.TransactionCallback;
-import org.neo4j.driver.TransactionConfig;
-import org.neo4j.driver.TransactionWork;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
+
+import org.neo4j.driver.*;
 import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.driver.internal.async.NetworkSession;
 import org.neo4j.driver.internal.async.UnmanagedTransaction;
@@ -81,6 +76,60 @@ public class InternalSession extends AbstractQueryRunner implements Session {
                 session.closeAsync(),
                 () -> terminateConnectionOnThreadInterrupt("Thread interrupted while closing the session"));
     }
+
+    private QueryResult query(Query query, Function<SessionQueryConfigBuilder, SessionQueryConfigBuilder> configBuilderFunction) {
+        return query(query, configBuilderFunction.apply(new SessionQueryConfigBuilder()).build());
+    }
+    @Override
+    public QueryResult query(String query, ClusterMemberAccess clusterMemberAccess) {
+        return query(new Query(query), x -> x.withClusterMemberAccess(clusterMemberAccess));
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess) {
+        return query(new Query(query, parameters), x -> x.withClusterMemberAccess(clusterMemberAccess));
+    }
+
+    @Override
+    public QueryResult query(Query query, ClusterMemberAccess clusterMemberAccess) {
+        return query(query, x -> x.withClusterMemberAccess(clusterMemberAccess));
+    }
+
+    @Override
+    public QueryResult query(String query, SessionQueryConfig config) {
+        return query(new Query(query), config);
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters, SessionQueryConfig config) {
+        return query(new Query(query, parameters), config);
+    }
+
+    @Override
+    public QueryResult query(Query query, SessionQueryConfig config) {
+        return executeQuery(query, config.clusterMemberAccess(),
+                config.transactionConfig(), config.queryConfig());
+    }
+
+    public QueryResult executeQuery(Query query, ClusterMemberAccess clusterMemberAccess,
+                                    TransactionConfig txConfig, QueryConfig queryConfig) {
+        return switch (clusterMemberAccess) {
+            case Automatic -> ValidateCanRouteAndExecute(query, txConfig, queryConfig);
+            case Readers -> executeRead(x -> x.query(query, queryConfig), txConfig);
+            case Writers -> executeWrite(x -> x.query(query, queryConfig), txConfig);
+        };
+    }
+    private QueryResult ValidateCanRouteAndExecute(Query query, TransactionConfig txConfig, QueryConfig queryConfig) {
+        return Futures.blockingGet(this.session
+                .canAutoRouteQuery()
+                .thenApply(canRoute -> {
+                    if (canRoute) {
+                        return executeRead(x -> x.query(query, queryConfig), txConfig);
+                    }
+                    throw new IllegalStateException("Server does not support Automatic ClusterMemberAccess");
+                }));
+    }
+
 
     @Override
     public Transaction beginTransaction() {

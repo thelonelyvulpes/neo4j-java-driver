@@ -5,11 +5,11 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class SessionQueryConfigBuilder {
-    private Duration timeout;
     private ClusterMemberAccess clusterMemberAccess = ClusterMemberAccess.Automatic;
-    private Map<String, Object> metadata;
-    private Boolean skipRecords;
-    private Integer maxRecordCount;
+    private Duration timeout = Duration.ZERO;
+    private Map<String, Object> metadata = null;
+    private Boolean skipRecords = false;
+    private Integer maxRecordCount = 1000;
     private Function<RetryInfo, RetryDelay> retryFunction = DriverQueryConfig.transientFunctions;
 
     public SessionQueryConfigBuilder withClusterMemberAccess(ClusterMemberAccess clusterMemberAccess) {

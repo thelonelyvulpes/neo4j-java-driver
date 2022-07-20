@@ -18,12 +18,15 @@
  */
 package org.neo4j.driver.internal;
 
-import org.neo4j.driver.Query;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Transaction;
+import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
 import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.driver.internal.async.UnmanagedTransaction;
 import org.neo4j.driver.internal.util.Futures;
+
+import java.util.Map;
+
+import static org.neo4j.driver.internal.util.Futures.getNow;
 
 public class InternalTransaction extends AbstractQueryRunner implements Transaction {
     private final UnmanagedTransaction tx;
@@ -68,5 +71,50 @@ public class InternalTransaction extends AbstractQueryRunner implements Transact
 
     private void terminateConnectionOnThreadInterrupt(String reason) {
         tx.connection().terminateAndRelease(reason);
+    }
+
+    @Override
+    public QueryResult query(String query) {
+        return this.query(new Query(query), QueryConfig.defaultValue());
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters) {
+        return this.query(new Query(query, parameters), QueryConfig.defaultValue());
+    }
+
+    @Override
+    public QueryResult query(Query query) {
+        return this.query(query, QueryConfig.defaultValue());
+    }
+
+    @Override
+    public QueryResult query(String query, QueryConfig config) {
+        return this.query(new Query(query), config);
+
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters, QueryConfig config) {
+        return this.query(new Query(query, parameters), config);
+    }
+
+    @Override
+    public QueryResult query(Query query, QueryConfig config) {
+        var cursorFuture = tx.runAsync(query);
+        if (config.skipRecords()) {
+            return Futures.blockingGet(cursorFuture
+                    .thenCompose(ResultCursor::consumeAsync)
+                    .thenApply(value -> new QueryResult(new Record[0], value, new String[0])));
+        }
+
+        var listFuture = cursorFuture.thenCompose(ResultCursor::listAsync);
+        var consumeFuture = listFuture.thenCompose(_x -> cursorFuture.thenCompose(ResultCursor::consumeAsync));
+        return Futures.blockingGet(consumeFuture.thenCombine(
+                listFuture,
+                (summaryCompletionStage, listCompletionStage) ->
+                        new QueryResult(listCompletionStage.toArray(new Record[0]),
+                                summaryCompletionStage,
+                                getNow(cursorFuture).keys().toArray(new String[0]))));
     }
 }

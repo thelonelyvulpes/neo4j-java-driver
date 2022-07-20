@@ -19,12 +19,9 @@
 package org.neo4j.driver.internal;
 
 import java.util.Map;
-import org.neo4j.driver.Query;
+
+import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Transaction;
-import org.neo4j.driver.TransactionContext;
-import org.neo4j.driver.Value;
 
 final class DelegatingTransactionContext implements TransactionContext {
     private final Transaction delegate;
@@ -56,5 +53,35 @@ final class DelegatingTransactionContext implements TransactionContext {
     @Override
     public Result run(Query query) {
         return delegate.run(query);
+    }
+
+    @Override
+    public QueryResult query(String query) {
+        return delegate.query(query);
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters) {
+        return delegate.query(query, parameters);
+    }
+
+    @Override
+    public QueryResult query(Query query) {
+        return delegate.query(query);
+    }
+
+    @Override
+    public QueryResult query(String query, QueryConfig config) {
+        return delegate.query(query, config);
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters, QueryConfig config) {
+        return delegate.query(query, parameters, config);
+    }
+
+    @Override
+    public QueryResult query(Query query, QueryConfig config) {
+        return delegate.query(query, config);
     }
 }

@@ -15,3 +15,4 @@ public interface AsyncTransactionQueryRunner {
     CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, QueryConfig config);
     CompletionStage<QueryResult> queryAsync(Query query, QueryConfig config);
 }
+

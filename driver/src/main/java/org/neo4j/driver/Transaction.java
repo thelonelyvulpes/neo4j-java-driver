@@ -42,7 +42,7 @@ import org.neo4j.driver.util.Resource;
  * @see QueryRunner
  * @since 1.0
  */
-public interface Transaction extends Resource, QueryRunner {
+public interface Transaction extends Resource, QueryRunner, TransactionQueryRunner {
     /**
      * Commit this current transaction.
      * When this method returns, all outstanding queries in the transaction are guaranteed to

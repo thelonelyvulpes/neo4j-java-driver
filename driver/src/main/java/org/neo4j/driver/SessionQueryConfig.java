@@ -8,7 +8,7 @@ public record SessionQueryConfig(
         java.time.Duration timeout,
         Map<String, Object> metadata,
         Function<RetryInfo, RetryDelay> retryFunction,
-        long maxRecordCount,
+        Integer maxRecordCount,
         Boolean skipRecords) {
 
     public static SessionQueryConfigBuilder builder() {

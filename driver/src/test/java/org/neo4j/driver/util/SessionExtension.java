@@ -26,16 +26,8 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.neo4j.driver.Bookmark;
-import org.neo4j.driver.Query;
+import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.Transaction;
-import org.neo4j.driver.TransactionCallback;
-import org.neo4j.driver.TransactionConfig;
-import org.neo4j.driver.TransactionWork;
-import org.neo4j.driver.Value;
 
 /**
  * A little utility for integration testing, this provides tests with a session they can work with.
@@ -65,6 +57,38 @@ public class SessionExtension extends DatabaseExtension implements Session, Befo
     @Override
     public void close() {
         throw new UnsupportedOperationException("Disallowed on this test session");
+    }
+
+    @Override
+    public QueryResult query(String query, ClusterMemberAccess clusterMemberAccess) {
+        return realSession.query(query, clusterMemberAccess);
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess) {
+        return realSession.query(query, parameters, clusterMemberAccess);
+
+    }
+
+    @Override
+    public QueryResult query(Query query, ClusterMemberAccess clusterMemberAccess) {
+        return realSession.query(query, clusterMemberAccess);
+    }
+
+    @Override
+    public QueryResult query(String query, SessionQueryConfig config) {
+        return realSession.query(query, config);
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters, SessionQueryConfig config) {
+        return realSession.query(query, parameters, config);
+
+    }
+
+    @Override
+    public QueryResult query(Query query, SessionQueryConfig config) {
+        return realSession.query(query, config);
     }
 
     @Override

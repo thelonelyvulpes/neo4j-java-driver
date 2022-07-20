@@ -11,6 +11,7 @@ public record DriverQueryConfig(
         String database,
         Set<Bookmark> bookmarks,
         Integer maxRetries,
+        Function<RetryInfo, RetryDelay> retryFunction,
         Duration timeout,
         Map<String, Object> metadata,
         Integer maxRecordCount,

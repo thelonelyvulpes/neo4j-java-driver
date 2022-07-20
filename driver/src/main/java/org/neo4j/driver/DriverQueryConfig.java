@@ -1,39 +1,40 @@
 package org.neo4j.driver;
 
+import org.neo4j.driver.internal.BookmarksHolder;
 
-import java.time.Duration;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 
-public record DriverQueryConfig(
-        ClusterMemberAccess access,
-        String database,
-        Set<Bookmark> bookmarks,
-        Integer maxRetries,
-        Function<RetryInfo, RetryDelay> retryFunction,
-        Duration timeout,
-        Map<String, Object> metadata,
-        Integer maxRecordCount,
-        Boolean skipRecords
-        ) {
-    public static final Function<RetryInfo, RetryDelay> transientFunctions = info ->
-            info.attempts() > info.maxRetry()
-                    ? new RetryDelay(true, Duration.ofMillis(info.attempts() * 100))
-                    : new RetryDelay(false, Duration.ZERO);
+public record DriverQueryConfig(String database, Set<Bookmark> bookmarks, SessionQueryConfig sessionQueryConfig) {
 
     public static DriverQueryConfigBuilder builder() {
         return new DriverQueryConfigBuilder();
     }
 
-    public QueryConfig queryConfig() {
-        return new QueryConfig(this.maxRecordCount, skipRecords);
+    public static final DriverQueryConfig defaultInstance =
+            new DriverQueryConfig("neo4j", null, SessionQueryConfig.defaultInstance);
+
+    public static final DriverQueryConfig read = new DriverQueryConfig("neo4j", null, SessionQueryConfig.read);
+
+    public static final DriverQueryConfig write = new DriverQueryConfig("neo4j", null, SessionQueryConfig.write);
+
+    public static final DriverQueryConfig autoCommit =
+            new DriverQueryConfig("neo4j", null, SessionQueryConfig.autoCommit);
+
+    public boolean validate() {
+        return sessionQueryConfig.validate();
     }
 
-    public TransactionConfig transactionConfig() {
-        var builder = TransactionConfig.builder();
-        builder.withMetadata(metadata);
-        builder.withTimeout(timeout);
+    public SessionConfig sessionConfig(BookmarksHolder bookmarksHolder) {
+        SessionConfig.Builder builder = SessionConfig.builder();
+
+        if (this.bookmarks() != null)
+            builder.withBookmarks(this.bookmarks());
+        else if (bookmarksHolder != null)
+            builder.withBookmarks(bookmarksHolder.getBookmarks());
+
+        if (this.database() != null)
+            builder.withDatabase(this.database());
+
         return builder.build();
     }
 }

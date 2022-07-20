@@ -5,15 +5,36 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class SessionQueryConfigBuilder {
-    private ClusterMemberAccess clusterMemberAccess = ClusterMemberAccess.Automatic;
-    private Duration timeout = Duration.ZERO;
-    private Map<String, Object> metadata = null;
-    private Boolean skipRecords = false;
-    private Integer maxRecordCount = 1000;
-    private Function<RetryInfo, RetryDelay> retryFunction = DriverQueryConfig.transientFunctions;
+    private ClusterMemberAccess clusterMemberAccess;
+    private Boolean executeInTransaction;
+    private Duration timeout;
+    private Map<String, Object> metadata;
+    private Integer maxRetries;
+    private Function<RetryInfo, RetryDelay> retryFunction;
+    private Boolean skipRecords;
+    private Integer maxRecordCount;
+
+    public SessionQueryConfigBuilder() {
+        this(SessionQueryConfig.defaultInstance);
+    }
+
+    public SessionQueryConfigBuilder(SessionQueryConfig fromConfig) {
+        this.clusterMemberAccess = fromConfig.clusterMemberAccess();
+        this.timeout = fromConfig.timeout();
+        this.metadata = fromConfig.metadata();
+        this.skipRecords = fromConfig.queryConfig().skipRecords();
+        this.maxRecordCount = fromConfig.queryConfig().maxRecordCount();
+        this.maxRetries = fromConfig.maxRetries();
+        this.retryFunction = fromConfig.retryFunction();
+    }
 
     public SessionQueryConfigBuilder withClusterMemberAccess(ClusterMemberAccess clusterMemberAccess) {
         this.clusterMemberAccess = clusterMemberAccess;
+        return this;
+    }
+
+    public SessionQueryConfigBuilder withExecuteInTransaction(boolean executeInTransaction) {
+        this.executeInTransaction = executeInTransaction;
         return this;
     }
 
@@ -27,13 +48,18 @@ public class SessionQueryConfigBuilder {
         return this;
     }
 
-    public SessionQueryConfigBuilder withMaxRecordCount(int maxRecordCount){
+    public SessionQueryConfigBuilder withMaxRecordCount(int maxRecordCount) {
         this.maxRecordCount = maxRecordCount;
         return this;
     }
 
-    public SessionQueryConfigBuilder withSkipRecords(boolean skipRecords){
+    public SessionQueryConfigBuilder withSkipRecords(boolean skipRecords) {
         this.skipRecords = skipRecords;
+        return this;
+    }
+
+    public SessionQueryConfigBuilder withMaxRetries(int maxRetries) {
+        this.maxRetries = maxRetries;
         return this;
     }
 
@@ -43,11 +69,13 @@ public class SessionQueryConfigBuilder {
     }
 
     public SessionQueryConfig build() {
-        return new SessionQueryConfig(clusterMemberAccess,
+        return new SessionQueryConfig(
+                clusterMemberAccess,
+                executeInTransaction,
                 timeout,
                 metadata,
+                maxRetries,
                 retryFunction,
-                maxRecordCount,
-                skipRecords);
+                new QueryConfig(maxRecordCount, skipRecords));
     }
 }

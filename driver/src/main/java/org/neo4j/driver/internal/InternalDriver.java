@@ -197,35 +197,14 @@ public class InternalDriver implements Driver {
 
     @Override
     public CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config) {
-        if (!validateConfig(config)) {
+        if (!config.validate()) {
             throw new IllegalStateException("Config specified was not valid.");
         }
-        var internalSession = (InternalAsyncSession) asyncSession(readSessionConfig(config));
-        var queryFuture =  internalSession
-                .executeQueryAsync(query, config.access(), config.transactionConfig(), config.queryConfig());
+        var internalSession = new InternalAsyncSession(newSession(config.sessionConfig(this.bookmarksHolder)));
+        var queryFuture = internalSession.queryAsync(query, config.sessionQueryConfig());
         var bookmarkFuture = queryFuture.thenRun(() -> updateBookmarks(internalSession));
         return bookmarkFuture.thenCombine(queryFuture, (_x, result) -> result);
     }
-
-    private SessionConfig readSessionConfig(DriverQueryConfig config) {
-        SessionConfig.Builder builder = SessionConfig.builder();
-
-        if (config.bookmarks() != null) {
-            builder.withBookmarks(config.bookmarks());
-        } else {
-            builder.withBookmarks(this.bookmarksHolder.getBookmarks());
-        }
-
-        if (config.database() != null)
-            builder.withDatabase(config.database());
-
-        return builder.build();
-    }
-
-    private boolean validateConfig(DriverQueryConfig config) {
-        return true;
-    }
-
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess) {

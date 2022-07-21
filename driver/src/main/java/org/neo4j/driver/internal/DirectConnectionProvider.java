@@ -23,6 +23,7 @@ import static org.neo4j.driver.internal.messaging.request.MultiDatabaseUtil.supp
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
 import org.neo4j.driver.internal.async.ConnectionContext;
 import org.neo4j.driver.internal.async.connection.DirectConnection;
 import org.neo4j.driver.internal.spi.Connection;
@@ -76,8 +77,7 @@ public class DirectConnectionProvider implements ConnectionProvider {
     @Override
     public CompletionStage<Boolean> supportsAutoQueryRouting() {
         return acquireConnection().thenCompose(conn -> {
-            var supportsAuto = conn.supportsAutoRoutingQuery();
-            return conn.release().thenApply((_x) -> supportsAuto);
+            return conn.release().thenApply(ignored -> true);
         });
     }
 

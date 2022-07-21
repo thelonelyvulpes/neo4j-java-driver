@@ -32,6 +32,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.internal.handlers.PullAllResponseHandler;
 import org.neo4j.driver.internal.handlers.PullResponseCompletionListener;
 import org.neo4j.driver.internal.handlers.RunResponseHandler;
@@ -67,7 +68,18 @@ public class AutoPullResponseHandler extends BasicPullResponseHandler implements
             MetadataExtractor metadataExtractor,
             PullResponseCompletionListener completionListener,
             long fetchSize) {
-        super(query, runResponseHandler, connection, metadataExtractor, completionListener, true);
+        this(query, runResponseHandler, connection, metadataExtractor, completionListener, fetchSize, -1);
+    }
+
+    public AutoPullResponseHandler(
+            Query query,
+            RunResponseHandler runResponseHandler,
+            Connection connection,
+            MetadataExtractor metadataExtractor,
+            PullResponseCompletionListener completionListener,
+            long fetchSize,
+            long maxRecordCount) {
+        super(query, runResponseHandler, connection, metadataExtractor, completionListener, true, maxRecordCount);
         this.fetchSize = fetchSize;
 
         // For pull everything ensure conditions for disabling auto pull are never met
@@ -178,10 +190,14 @@ public class AutoPullResponseHandler extends BasicPullResponseHandler implements
             }
 
             return summaryFuture;
-        }
-    }
+        }    }
 
     private void enqueueRecord(Record record) {
+        if (super.maxRecordCount > -1 && super.counter.incrementAndGet() >= super.maxRecordCount){
+            this.failRecordFuture(new ClientException("Exceeded maximum record count"));
+            this.cancel();
+            return;
+        }
         if (records == UNINITIALIZED_RECORDS) {
             records = new ArrayDeque<>();
         }

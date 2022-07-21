@@ -55,17 +55,17 @@ public class BoltProtocolV41 extends BoltProtocolV4 {
             BookmarksHolder bookmarksHolder,
             UnmanagedTransaction tx,
             RunWithMetadataMessage runMessage,
-            long fetchSize) {
+            long fetchSize,
+            long maxRecordCount) {
         CompletableFuture<Void> runFuture = new CompletableFuture<>();
         RunResponseHandler runHandler = new RunResponseHandler(runFuture, METADATA_EXTRACTOR, connection, tx);
 
         PullAllResponseHandler pullAllHandler =
-                newBoltV4AutoPullHandler(query, runHandler, connection, bookmarksHolder, tx, fetchSize);
+                newBoltV4AutoPullHandler(query, runHandler, connection, bookmarksHolder, tx, fetchSize, maxRecordCount);
         PullResponseHandler pullHandler = newBoltV4BasicPullHandler(query, runHandler, connection, bookmarksHolder, tx);
 
         return new ResultCursorFactoryImpl(connection, runMessage, runHandler, runFuture, pullHandler, pullAllHandler);
     }
-
     @Override
     protected void verifyDatabaseNameBeforeTransaction(DatabaseName databaseName) {
         // Bolt V4.1 accepts database name

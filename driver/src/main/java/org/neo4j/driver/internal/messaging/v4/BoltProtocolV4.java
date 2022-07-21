@@ -18,14 +18,12 @@
  */
 package org.neo4j.driver.internal.messaging.v4;
 
-import static org.neo4j.driver.internal.handlers.PullHandlers.newBoltV4AutoPullHandler;
-import static org.neo4j.driver.internal.handlers.PullHandlers.newBoltV4BasicPullHandler;
-
 import java.util.concurrent.CompletableFuture;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.internal.BookmarksHolder;
 import org.neo4j.driver.internal.DatabaseName;
 import org.neo4j.driver.internal.async.UnmanagedTransaction;
+import org.neo4j.driver.internal.cursor.AsyncResultCursorOnlyFactory;
 import org.neo4j.driver.internal.cursor.ResultCursorFactory;
 import org.neo4j.driver.internal.cursor.ResultCursorFactoryImpl;
 import org.neo4j.driver.internal.handlers.PullAllResponseHandler;
@@ -37,6 +35,8 @@ import org.neo4j.driver.internal.messaging.MessageFormat;
 import org.neo4j.driver.internal.messaging.request.RunWithMetadataMessage;
 import org.neo4j.driver.internal.messaging.v3.BoltProtocolV3;
 import org.neo4j.driver.internal.spi.Connection;
+
+import static org.neo4j.driver.internal.handlers.PullHandlers.*;
 
 public class BoltProtocolV4 extends BoltProtocolV3 {
     public static final BoltProtocolVersion VERSION = new BoltProtocolVersion(4, 0);
@@ -54,16 +54,19 @@ public class BoltProtocolV4 extends BoltProtocolV3 {
             BookmarksHolder bookmarksHolder,
             UnmanagedTransaction tx,
             RunWithMetadataMessage runMessage,
-            long fetchSize) {
+            long fetchSize,
+            long maxRecordCount) {
         CompletableFuture<Void> runFuture = new CompletableFuture<>();
         RunResponseHandler runHandler = new RunResponseHandler(runFuture, METADATA_EXTRACTOR, connection, tx);
 
         PullAllResponseHandler pullAllHandler =
-                newBoltV4AutoPullHandler(query, runHandler, connection, bookmarksHolder, tx, fetchSize);
+                newBoltV4AutoPullHandler(query, runHandler, connection, bookmarksHolder, tx, fetchSize, maxRecordCount);
         PullResponseHandler pullHandler = newBoltV4BasicPullHandler(query, runHandler, connection, bookmarksHolder, tx);
 
         return new ResultCursorFactoryImpl(connection, runMessage, runHandler, runFuture, pullHandler, pullAllHandler);
     }
+
+
 
     @Override
     protected void verifyDatabaseNameBeforeTransaction(DatabaseName databaseName) {

@@ -35,11 +35,21 @@ public class PullHandlers {
             Connection connection,
             BookmarksHolder bookmarksHolder,
             UnmanagedTransaction tx) {
+        return newBoltV3PullAllHandler(query, runHandler, connection, bookmarksHolder, tx, -1);
+    }
+
+    public static PullAllResponseHandler newBoltV3PullAllHandler(
+            Query query,
+            RunResponseHandler runHandler,
+            Connection connection,
+            BookmarksHolder bookmarksHolder,
+            UnmanagedTransaction tx,
+            long maxRecordCount) {
         PullResponseCompletionListener completionListener =
                 createPullResponseCompletionListener(connection, bookmarksHolder, tx);
 
         return new LegacyPullAllResponseHandler(
-                query, runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, completionListener);
+                query, runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, completionListener, maxRecordCount);
     }
 
     public static PullAllResponseHandler newBoltV4AutoPullHandler(
@@ -49,11 +59,22 @@ public class PullHandlers {
             BookmarksHolder bookmarksHolder,
             UnmanagedTransaction tx,
             long fetchSize) {
+        return newBoltV4AutoPullHandler(query, runHandler, connection, bookmarksHolder, tx, fetchSize, -1);
+    }
+
+    public static PullAllResponseHandler newBoltV4AutoPullHandler(
+            Query query,
+            RunResponseHandler runHandler,
+            Connection connection,
+            BookmarksHolder bookmarksHolder,
+            UnmanagedTransaction tx,
+            long fetchSize,
+            long maxRecordCount) {
         PullResponseCompletionListener completionListener =
                 createPullResponseCompletionListener(connection, bookmarksHolder, tx);
 
         return new AutoPullResponseHandler(
-                query, runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, completionListener, fetchSize);
+                query, runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, completionListener, fetchSize, maxRecordCount);
     }
 
     public static PullResponseHandler newBoltV4BasicPullHandler(

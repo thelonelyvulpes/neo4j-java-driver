@@ -160,6 +160,23 @@ public class InternalDriver implements Driver {
     }
 
     @Override
+    public CompletionStage<QueryResult> queryAsync(String query) {
+        return queryAsync(new Query(query), DriverQueryConfig.defaultInstance);
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters) {
+        return queryAsync(new Query(query, parameters), DriverQueryConfig.defaultInstance);
+
+    }
+
+    @Override
+    public CompletionStage<QueryResult> queryAsync(Query query) {
+        return queryAsync(query, DriverQueryConfig.defaultInstance);
+
+    }
+
+    @Override
     public void verifyConnectivity() {
         Futures.blockingGet(verifyConnectivityAsync());
     }
@@ -197,13 +214,30 @@ public class InternalDriver implements Driver {
 
     @Override
     public CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config) {
-        if (!config.validate()) {
-            throw new IllegalStateException("Config specified was not valid.");
+        var validationError = config.validate();
+        if (validationError.isPresent()) {
+            throw validationError.get();
         }
         var internalSession = new InternalAsyncSession(newSession(config.sessionConfig(this.bookmarksHolder)));
         var queryFuture = internalSession.queryAsync(query, config.sessionQueryConfig());
         var bookmarkFuture = queryFuture.thenRun(() -> updateBookmarks(internalSession));
         return bookmarkFuture.thenCombine(queryFuture, (_x, result) -> result);
+    }
+
+    @Override
+    public QueryResult query(String query) {
+        return query(new Query(query), DriverQueryConfig.defaultInstance);
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters) {
+        return query(new Query(query, parameters), DriverQueryConfig.defaultInstance);
+
+    }
+
+    @Override
+    public QueryResult query(Query query) {
+        return query(query, DriverQueryConfig.defaultInstance);
     }
 
     @Override

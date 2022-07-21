@@ -240,12 +240,19 @@ public interface Driver extends AutoCloseable {
     Boolean supportsAutomaticClusterMemberAccess();
     CompletionStage<Boolean> supportsAutomaticClusterMemberAccessAsync();
 
+    CompletionStage<QueryResult> queryAsync(String query);
+    CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters);
+    CompletionStage<QueryResult> queryAsync(Query query);
     CompletionStage<QueryResult> queryAsync(String query, ClusterMemberAccess clusterMemberAccess);
     CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
     CompletionStage<QueryResult> queryAsync(Query query, ClusterMemberAccess clusterMemberAccess);
     CompletionStage<QueryResult> queryAsync(String query, DriverQueryConfig config);
     CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, DriverQueryConfig config);
     CompletionStage<QueryResult> queryAsync(Query query, DriverQueryConfig config);
+
+    QueryResult query(String query);
+    QueryResult query(String query, Map<String, Object> parameters);
+    QueryResult query(Query query);
     QueryResult query(String query, ClusterMemberAccess clusterMemberAccess);
     QueryResult query(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
     QueryResult query(Query query, ClusterMemberAccess clusterMemberAccess);

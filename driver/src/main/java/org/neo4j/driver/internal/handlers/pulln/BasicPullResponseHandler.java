@@ -20,11 +20,13 @@ package org.neo4j.driver.internal.handlers.pulln;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
+import static java.util.Collections.max;
 import static java.util.Objects.requireNonNull;
 import static org.neo4j.driver.internal.handlers.pulln.FetchSizeUtil.UNLIMITED_FETCH_SIZE;
 import static org.neo4j.driver.internal.messaging.request.DiscardMessage.newDiscardAllMessage;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Record;
@@ -49,6 +51,8 @@ public class BasicPullResponseHandler implements PullResponseHandler {
     protected final Connection connection;
     private final PullResponseCompletionListener completionListener;
     private final boolean syncSignals;
+    protected final long maxRecordCount;
+    protected AtomicLong counter = new AtomicLong(0);
 
     private State state;
     private long toRequest;
@@ -61,7 +65,7 @@ public class BasicPullResponseHandler implements PullResponseHandler {
             Connection connection,
             MetadataExtractor metadataExtractor,
             PullResponseCompletionListener completionListener) {
-        this(query, runResponseHandler, connection, metadataExtractor, completionListener, false);
+        this(query, runResponseHandler, connection, metadataExtractor, completionListener, false, -1);
     }
 
     public BasicPullResponseHandler(
@@ -70,7 +74,8 @@ public class BasicPullResponseHandler implements PullResponseHandler {
             Connection connection,
             MetadataExtractor metadataExtractor,
             PullResponseCompletionListener completionListener,
-            boolean syncSignals) {
+            boolean syncSignals,
+            long maxRecordCount) {
         this.query = requireNonNull(query);
         this.runResponseHandler = requireNonNull(runResponseHandler);
         this.metadataExtractor = requireNonNull(metadataExtractor);
@@ -79,6 +84,7 @@ public class BasicPullResponseHandler implements PullResponseHandler {
         this.syncSignals = syncSignals;
 
         this.state = State.READY_STATE;
+        this.maxRecordCount = maxRecordCount;
     }
 
     @Override

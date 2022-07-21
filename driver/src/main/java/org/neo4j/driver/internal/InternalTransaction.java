@@ -75,17 +75,17 @@ public class InternalTransaction extends AbstractQueryRunner implements Transact
 
     @Override
     public QueryResult query(String query) {
-        return this.query(new Query(query), QueryConfig.defaultValue());
+        return this.query(new Query(query), QueryConfig.defaultValue);
     }
 
     @Override
     public QueryResult query(String query, Map<String, Object> parameters) {
-        return this.query(new Query(query, parameters), QueryConfig.defaultValue());
+        return this.query(new Query(query, parameters), QueryConfig.defaultValue);
     }
 
     @Override
     public QueryResult query(Query query) {
-        return this.query(query, QueryConfig.defaultValue());
+        return this.query(query, QueryConfig.defaultValue);
     }
 
     @Override

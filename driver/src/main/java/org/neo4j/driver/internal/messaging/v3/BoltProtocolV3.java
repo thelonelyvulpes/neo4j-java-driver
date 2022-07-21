@@ -147,6 +147,17 @@ public class BoltProtocolV3 implements BoltProtocol {
             BookmarksHolder bookmarksHolder,
             TransactionConfig config,
             long fetchSize) {
+        return runInAutoCommitTransaction(connection, query, bookmarksHolder, config, fetchSize, -1);
+    }
+
+    @Override
+    public ResultCursorFactory runInAutoCommitTransaction(
+            Connection connection,
+            Query query,
+            BookmarksHolder bookmarksHolder,
+            TransactionConfig config,
+            long fetchSize,
+            long maxRecordCount) {
         verifyDatabaseNameBeforeTransaction(connection.databaseName());
         RunWithMetadataMessage runMessage = autoCommitTxRunMessage(
                 query,
@@ -155,14 +166,20 @@ public class BoltProtocolV3 implements BoltProtocol {
                 connection.mode(),
                 bookmarksHolder.getBookmarks(),
                 connection.impersonatedUser());
-        return buildResultCursorFactory(connection, query, bookmarksHolder, null, runMessage, fetchSize);
+        return buildResultCursorFactory(connection, query, bookmarksHolder, null, runMessage, fetchSize, maxRecordCount);
     }
 
     @Override
     public ResultCursorFactory runInUnmanagedTransaction(
             Connection connection, Query query, UnmanagedTransaction tx, long fetchSize) {
+        return runInUnmanagedTransaction(connection, query, tx, fetchSize, -1);
+    }
+
+    @Override
+    public ResultCursorFactory runInUnmanagedTransaction(
+            Connection connection, Query query, UnmanagedTransaction tx, long fetchSize, long maxRecordCount) {
         RunWithMetadataMessage runMessage = unmanagedTxRunMessage(query);
-        return buildResultCursorFactory(connection, query, BookmarksHolder.NO_OP, tx, runMessage, fetchSize);
+        return buildResultCursorFactory(connection, query, BookmarksHolder.NO_OP, tx, runMessage, fetchSize, maxRecordCount);
     }
 
     protected ResultCursorFactory buildResultCursorFactory(
@@ -171,14 +188,16 @@ public class BoltProtocolV3 implements BoltProtocol {
             BookmarksHolder bookmarksHolder,
             UnmanagedTransaction tx,
             RunWithMetadataMessage runMessage,
-            long ignored) {
+            long ignored,
+            long maxRecordCount) {
         CompletableFuture<Void> runFuture = new CompletableFuture<>();
         RunResponseHandler runHandler = new RunResponseHandler(runFuture, METADATA_EXTRACTOR, connection, tx);
         PullAllResponseHandler pullHandler =
-                newBoltV3PullAllHandler(query, runHandler, connection, bookmarksHolder, tx);
+                newBoltV3PullAllHandler(query, runHandler, connection, bookmarksHolder, tx, maxRecordCount);
 
         return new AsyncResultCursorOnlyFactory(connection, runMessage, runHandler, runFuture, pullHandler);
     }
+
 
     protected void verifyDatabaseNameBeforeTransaction(DatabaseName databaseName) {
         assertEmptyDatabaseName(databaseName, version());

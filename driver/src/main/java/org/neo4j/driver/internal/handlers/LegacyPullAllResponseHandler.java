@@ -19,6 +19,7 @@
 package org.neo4j.driver.internal.handlers;
 
 import static java.util.Collections.emptyMap;
+import static java.util.Collections.max;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.neo4j.driver.internal.util.Futures.completedWithNull;
@@ -31,10 +32,12 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Value;
+import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.driver.internal.InternalRecord;
 import org.neo4j.driver.internal.messaging.request.PullAllMessage;
@@ -58,6 +61,8 @@ public class LegacyPullAllResponseHandler implements PullAllResponseHandler {
     protected final MetadataExtractor metadataExtractor;
     protected final Connection connection;
     private final PullResponseCompletionListener completionListener;
+    private long maxRecordCount = -1;
+    private AtomicLong counter = new AtomicLong(0);
 
     // initialized lazily when first record arrives
     private Queue<Record> records = UNINITIALIZED_RECORDS;
@@ -82,6 +87,21 @@ public class LegacyPullAllResponseHandler implements PullAllResponseHandler {
         this.metadataExtractor = requireNonNull(metadataExtractor);
         this.connection = requireNonNull(connection);
         this.completionListener = requireNonNull(completionListener);
+    }
+
+    public LegacyPullAllResponseHandler(
+            Query query,
+            RunResponseHandler runResponseHandler,
+            Connection connection,
+            MetadataExtractor metadataExtractor,
+            PullResponseCompletionListener completionListener,
+            long maxRecordCount) {
+        this.query = requireNonNull(query);
+        this.runResponseHandler = requireNonNull(runResponseHandler);
+        this.metadataExtractor = requireNonNull(metadataExtractor);
+        this.connection = requireNonNull(connection);
+        this.completionListener = requireNonNull(completionListener);
+        this.maxRecordCount = maxRecordCount;
     }
 
     @Override
@@ -131,6 +151,11 @@ public class LegacyPullAllResponseHandler implements PullAllResponseHandler {
 
     @Override
     public synchronized void onRecord(Value[] fields) {
+        if (maxRecordCount != -1 && counter.incrementAndGet() > maxRecordCount) {
+            onFailure(new ClientException("Maximum record set size exceeded"));
+            return;
+        }
+
         if (ignoreRecords) {
             completeRecordFuture(null);
         } else {

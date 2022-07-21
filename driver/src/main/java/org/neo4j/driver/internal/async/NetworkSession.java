@@ -90,6 +90,18 @@ public class NetworkSession {
         CompletionStage<AsyncResultCursor> newResultCursorStage =
                 buildResultCursorFactory(query, config).thenCompose(ResultCursorFactory::asyncResult);
 
+
+        resultCursorStage = newResultCursorStage.exceptionally(error -> null);
+        return newResultCursorStage
+                .thenCompose(AsyncResultCursor::mapSuccessfulRunCompletionAsync)
+                .thenApply(cursor -> cursor); // convert the return type
+    }
+
+    public CompletionStage<ResultCursor> runAsync(Query query, TransactionConfig config, AccessMode overridenAccessMode, long maxRecordCount) {
+        CompletionStage<AsyncResultCursor> newResultCursorStage =
+                buildResultCursorFactory(query, config, overridenAccessMode, maxRecordCount).thenCompose(ResultCursorFactory::asyncResult);
+
+
         resultCursorStage = newResultCursorStage.exceptionally(error -> null);
         return newResultCursorStage
                 .thenCompose(AsyncResultCursor::mapSuccessfulRunCompletionAsync)
@@ -199,23 +211,27 @@ public class NetworkSession {
                 connection.isOpen()); // and it's still open
     }
 
-    private CompletionStage<ResultCursorFactory> buildResultCursorFactory(Query query, TransactionConfig config) {
+    private CompletionStage<ResultCursorFactory> buildResultCursorFactory(Query query, TransactionConfig config, AccessMode accessMode, long maxLength) {
         ensureSessionIsOpen();
 
         return ensureNoOpenTxBeforeRunningQuery()
-                .thenCompose(ignore -> acquireConnection(mode))
+                .thenCompose(ignore -> acquireConnection(accessMode))
                 .thenApply(connection ->
                         ImpersonationUtil.ensureImpersonationSupport(connection, connection.impersonatedUser()))
                 .thenCompose(connection -> {
                     try {
                         ResultCursorFactory factory = connection
                                 .protocol()
-                                .runInAutoCommitTransaction(connection, query, bookmarksHolder, config, fetchSize);
+                                .runInAutoCommitTransaction(connection, query, bookmarksHolder, config, fetchSize, maxLength);
                         return completedFuture(factory);
                     } catch (Throwable e) {
                         return Futures.failedFuture(e);
                     }
                 });
+    }
+
+    private CompletionStage<ResultCursorFactory> buildResultCursorFactory(Query query, TransactionConfig config) {
+        return buildResultCursorFactory(query, config, mode, -1);
     }
 
     private CompletionStage<Connection> acquireConnection(AccessMode mode) {

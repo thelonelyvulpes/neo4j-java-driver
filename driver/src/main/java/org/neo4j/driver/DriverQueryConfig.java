@@ -2,6 +2,7 @@ package org.neo4j.driver;
 
 import org.neo4j.driver.internal.BookmarksHolder;
 
+import java.util.Optional;
 import java.util.Set;
 
 public record DriverQueryConfig(String database, Set<Bookmark> bookmarks, SessionQueryConfig sessionQueryConfig) {
@@ -10,6 +11,9 @@ public record DriverQueryConfig(String database, Set<Bookmark> bookmarks, Sessio
         return new DriverQueryConfigBuilder();
     }
 
+    public static DriverQueryConfigBuilder builder(DriverQueryConfig config) {
+        return new DriverQueryConfigBuilder(config);
+    }
     public static final DriverQueryConfig defaultInstance =
             new DriverQueryConfig("neo4j", null, SessionQueryConfig.defaultInstance);
 
@@ -20,7 +24,10 @@ public record DriverQueryConfig(String database, Set<Bookmark> bookmarks, Sessio
     public static final DriverQueryConfig autoCommit =
             new DriverQueryConfig("neo4j", null, SessionQueryConfig.autoCommit);
 
-    public boolean validate() {
+    public Optional<IllegalStateException> validate() {
+        if (database == null || database.equals("")) {
+            return Optional.of(new IllegalStateException("a database name must be defined"));
+        }
         return sessionQueryConfig.validate();
     }
 

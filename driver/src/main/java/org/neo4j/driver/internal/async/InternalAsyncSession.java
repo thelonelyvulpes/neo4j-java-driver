@@ -19,6 +19,7 @@
 package org.neo4j.driver.internal.async;
 
 import static java.util.Collections.emptyMap;
+import static org.neo4j.driver.internal.async.InternalAsyncTransaction.getQueryResultCompletionStage;
 import static org.neo4j.driver.internal.util.Futures.*;
 
 import java.util.HashSet;
@@ -27,6 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.neo4j.driver.*;
@@ -76,7 +79,8 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
     }
 
     @Override
-    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess) {
+    public CompletionStage<QueryResult> queryAsync(
+            String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess) {
         return this.queryAsync(new Query(query, parameters), x -> x.withClusterMemberAccess(clusterMemberAccess));
     }
 
@@ -87,21 +91,25 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query, SessionQueryConfig config) {
-        return this.queryAsync(new Query(query), config);
+        return this.executeQueryAsync(new Query(query), config);
     }
 
     @Override
-    public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, SessionQueryConfig config) {
-        return this.queryAsync(new Query(query, parameters), config);
+    public CompletionStage<QueryResult> queryAsync(
+            String query, Map<String, Object> parameters, SessionQueryConfig config) {
+        return this.executeQueryAsync(new Query(query, parameters), config);
     }
 
     @Override
     public CompletionStage<QueryResult> queryAsync(Query query, SessionQueryConfig config) {
-        return this.executeQueryAsync(query, config.clusterMemberAccess(), config.transactionConfig(), config.queryConfig());
+        return this.executeQueryAsync(query, config);
     }
 
-    private CompletionStage<QueryResult> queryAsync(Query query, Function<SessionQueryConfigBuilder, SessionQueryConfigBuilder> configBuilderFunction) {
-        return queryAsync(query, configBuilderFunction.apply(new SessionQueryConfigBuilder()).build());
+    private CompletionStage<QueryResult> queryAsync(
+            Query query, Function<SessionQueryConfigBuilder, SessionQueryConfigBuilder> configBuilderFunction) {
+        return executeQueryAsync(
+                query,
+                configBuilderFunction.apply(new SessionQueryConfigBuilder()).build());
     }
 
     @Override
@@ -228,25 +236,51 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
         });
     }
 
-    public CompletionStage<QueryResult> executeQueryAsync(Query query,
-                                                     ClusterMemberAccess clusterMemberAccess,
-                                                     TransactionConfig txConfig, QueryConfig queryConfig) {
-        return switch (clusterMemberAccess) {
-            case Automatic -> ValidateCanRouteAndExecute(query, txConfig, queryConfig);
-            case Readers -> executeReadAsync(x -> x.queryAsync(query, queryConfig), txConfig);
-            case Writers -> executeWriteAsync(x -> x.queryAsync(query, queryConfig), txConfig);
+    public CompletionStage<QueryResult> executeQueryAsync(Query query, SessionQueryConfig config) {
+        if (!config.executeInTransaction()) {
+            return switch (config.clusterMemberAccess()) {
+                case Automatic -> ValidateCanRouteAndRun(query, config);
+                case Readers -> runQueryAsync(query, config, AccessMode.READ);
+                case Writers -> runQueryAsync(query, config, AccessMode.WRITE);
+            };
+        }
+        return switch (config.clusterMemberAccess()) {
+            case Automatic -> ValidateCanRouteAndExecute(query, config);
+            case Readers -> executeReadAsync(
+                    x -> x.queryAsync(query, config.queryConfig()), config.transactionConfig());
+            case Writers -> executeWriteAsync(
+                    x -> x.queryAsync(query, config.queryConfig()), config.transactionConfig());
         };
     }
 
-    private CompletionStage<QueryResult> ValidateCanRouteAndExecute(Query query, TransactionConfig txConfig, QueryConfig queryConfig) {
+    private CompletionStage<QueryResult> ValidateCanRouteAndExecute(Query query, SessionQueryConfig config) {
+        return this.session.canAutoRouteQuery().thenCompose(canRoute -> {
+            if (canRoute) {
+                return executeWriteAsync(x -> x.queryAsync(query, config.queryConfig()), config.transactionConfig()); //TODO: Support for server side routing, will need to be lower down the stack.
+            }
+            throw new IllegalStateException("Server does not support Automatic ClusterMemberAccess");
+        });
+    }
+
+    private CompletionStage<QueryResult> runQueryAsync(Query query, SessionQueryConfig config, AccessMode accessMode) {
+        var cursorFuture = session.runAsync(query, config.transactionConfig(), accessMode, config.queryConfig().maxRecordCount());
+        if (config.queryConfig().skipRecords()) {
+            return cursorFuture
+                    .thenCompose(ResultCursor::consumeAsync)
+                    .thenApply(value -> new QueryResult(new Record[0], value, new String[0]));
+        }
+        return getQueryResultCompletionStage(cursorFuture);
+    }
+
+    private CompletionStage<QueryResult> ValidateCanRouteAndRun(Query query, SessionQueryConfig config) {
         return this.session
                 .canAutoRouteQuery()
                 .thenCompose(canRoute -> {
-                    if (canRoute) {
-                        return executeReadAsync(x -> x.queryAsync(query, queryConfig), txConfig);
+                    if (!canRoute) {
+                        throw new IllegalStateException("Server does not support Automatic ClusterMemberAccess");
                     }
-                    throw new IllegalStateException("Server does not support Automatic ClusterMemberAccess");
+
+                    return runQueryAsync(query, config, AccessMode.WRITE); //TODO: Support for server side routing, will need to be lower down the stack.
                 });
     }
-
 }

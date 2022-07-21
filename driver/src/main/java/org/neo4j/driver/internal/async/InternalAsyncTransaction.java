@@ -68,17 +68,17 @@ public class InternalAsyncTransaction extends AsyncAbstractQueryRunner implement
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query) {
-        return queryAsync(new Query(query), new QueryConfig(1000, false));
+        return queryAsync(new Query(query), QueryConfig.defaultValue);
     }
 
     @Override
     public CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters) {
-        return queryAsync(new Query(query, parameters), new QueryConfig(1000, false));
+        return queryAsync(new Query(query, parameters), QueryConfig.defaultValue);
     }
 
     @Override
     public CompletionStage<QueryResult> queryAsync(Query query) {
-        return this.queryAsync(query, new QueryConfig(1000, false));
+        return this.queryAsync(query, QueryConfig.defaultValue);
     }
 
     @Override
@@ -101,6 +101,10 @@ public class InternalAsyncTransaction extends AsyncAbstractQueryRunner implement
                     .thenApply(value -> new QueryResult(new Record[0], value, new String[0]));
         }
 
+        return getQueryResultCompletionStage(cursorFuture);
+    }
+
+    static CompletionStage<QueryResult> getQueryResultCompletionStage(CompletionStage<ResultCursor> cursorFuture) {
         var listFuture = cursorFuture.thenCompose(ResultCursor::listAsync);
         var consumeFuture = listFuture.thenCompose(_x -> cursorFuture.thenCompose(ResultCursor::consumeAsync));
         return consumeFuture.thenCombine(

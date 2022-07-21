@@ -139,9 +139,13 @@ public class UnmanagedTransaction {
     }
 
     public CompletionStage<ResultCursor> runAsync(Query query) {
+        return runAsync(query, -1);
+    }
+
+    public CompletionStage<ResultCursor> runAsync(Query query, long maxRecordCount) {
         ensureCanRunQueries();
         CompletionStage<AsyncResultCursor> cursorStage = protocol.runInUnmanagedTransaction(
-                        connection, query, this, fetchSize)
+                        connection, query, this, fetchSize, maxRecordCount)
                 .asyncResult();
         resultCursors.add(cursorStage);
         return cursorStage

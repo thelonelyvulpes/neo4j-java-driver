@@ -116,6 +116,24 @@ public interface BoltProtocol {
             long fetchSize);
 
     /**
+     * Execute the given query in an auto-commit transaction, i.e. {@link Session#run(Query)}.
+     *
+     * @param connection      the network connection to use.
+     * @param query           the cypher to execute.
+     * @param bookmarksHolder the bookmarksHolder that keeps track of the current bookmarks and can be updated with a new bookmark.
+     * @param config          the transaction config for the implicitly started auto-commit transaction.
+     * @param fetchSize       the record fetch size for PULL message.
+     * @return stage with cursor.
+     */
+    ResultCursorFactory runInAutoCommitTransaction(
+            Connection connection,
+            Query query,
+            BookmarksHolder bookmarksHolder,
+            TransactionConfig config,
+            long fetchSize,
+            long maxRecordCount);
+
+    /**
      * Execute the given query in a running unmanaged transaction, i.e. {@link Transaction#run(Query)}.
      *
      * @param connection the network connection to use.
@@ -126,6 +144,8 @@ public interface BoltProtocol {
      */
     ResultCursorFactory runInUnmanagedTransaction(
             Connection connection, Query query, UnmanagedTransaction tx, long fetchSize);
+    ResultCursorFactory runInUnmanagedTransaction(
+            Connection connection, Query query, UnmanagedTransaction tx, long fetchSize, long maxRecordCount);
 
     /**
      * Returns the protocol version. It can be used for version specific error messages.

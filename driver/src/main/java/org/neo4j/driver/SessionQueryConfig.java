@@ -2,6 +2,7 @@ package org.neo4j.driver;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 public record SessionQueryConfig(
@@ -38,8 +39,8 @@ public record SessionQueryConfig(
     public static final SessionQueryConfig defaultInstance = new SessionQueryConfig(
             ClusterMemberAccess.Automatic,
             true,
-            Duration.ZERO,
-            null,
+            Duration.ofDays(1),
+            Map.of(),
             2,
             Retries.transientFunctions,
             QueryConfig.defaultValue);
@@ -47,19 +48,31 @@ public record SessionQueryConfig(
     public static final SessionQueryConfig read = new SessionQueryConfig(
             ClusterMemberAccess.Readers,
             true,
-            Duration.ZERO,
-            null,
+            Duration.ofDays(1),
+            Map.of(),
             2,
             Retries.transientFunctions,
             QueryConfig.defaultValue);
 
     public static final SessionQueryConfig write = new SessionQueryConfig(
-            ClusterMemberAccess.Writers, true, Duration.ZERO, null, 2, Retries.noRetry, QueryConfig.defaultValue);
+            ClusterMemberAccess.Writers, true, Duration.ofDays(1), Map.of(), 2, Retries.transientFunctions, QueryConfig.defaultValue);
 
     public static final SessionQueryConfig autoCommit = new SessionQueryConfig(
-            ClusterMemberAccess.Writers, false, Duration.ZERO, null, 0, Retries.noRetry, QueryConfig.defaultValue);
+            ClusterMemberAccess.Writers, false, Duration.ofDays(1), null, 0, Retries.noRetry, QueryConfig.defaultValue);
 
-    public boolean validate() {
-        return true;
+    public Optional<IllegalStateException> validate() {
+        if (!executeInTransaction && metadata != null) {
+            return Optional.of(new IllegalStateException("can not define metadata when not executing in transaction."));
+        }
+
+        if (metadata == null) {
+            return Optional.of(new IllegalStateException("Metadata for transaction should not be null."));
+        }
+
+        if (maxRetries < 0) {
+            return Optional.of(new IllegalStateException("Can not define negative maximum retries."));
+        }
+
+        return QueryConfig.validate();
     }
 }

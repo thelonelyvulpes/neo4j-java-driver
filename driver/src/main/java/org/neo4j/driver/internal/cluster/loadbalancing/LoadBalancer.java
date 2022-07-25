@@ -240,10 +240,9 @@ public class LoadBalancer implements ConnectionProvider {
     }
 
     private CompletionStage<Boolean> supportsAutoQueryRouting(BoltServerAddress address) {
-        return connectionPool.acquire(address).thenComposeAsync(con -> {
-            var result = con.supportsAutoRoutingQuery();
-            return con.release().thenApplyAsync(_x -> result);
-        });
+        return this.supportsMultiDb(address)
+                .thenCompose(supports -> routingTables.ensureRoutingTable(simple(supports)))
+                .thenApply(x -> routingTables.allServers().size() == 1);
     }
 
     private CompletionStage<Boolean> supportsMultiDb(BoltServerAddress address) {

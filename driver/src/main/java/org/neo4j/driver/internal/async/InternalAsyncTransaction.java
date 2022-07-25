@@ -94,7 +94,7 @@ public class InternalAsyncTransaction extends AsyncAbstractQueryRunner implement
 
     @Override
     public CompletionStage<QueryResult> queryAsync(Query query, QueryConfig config) {
-        var cursorFuture = this.runAsync(query);
+        var cursorFuture = tx.runAsync(query, config.maxRecordCount());
         if (config.skipRecords()) {
             return cursorFuture
                     .thenCompose(ResultCursor::consumeAsync)

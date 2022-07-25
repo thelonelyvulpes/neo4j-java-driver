@@ -193,8 +193,10 @@ public class AutoPullResponseHandler extends BasicPullResponseHandler implements
         }    }
 
     private void enqueueRecord(Record record) {
-        if (super.maxRecordCount > -1 && super.counter.incrementAndGet() >= super.maxRecordCount){
-            this.failRecordFuture(new ClientException("Exceeded maximum record count"));
+        if (super.maxRecordCount > -1 && super.counter.incrementAndGet() > super.maxRecordCount){
+            var error = new ClientException("Exceeded maximum record count");
+            this.failRecordFuture(error);
+            this.failSummaryFuture(error);
             this.cancel();
             return;
         }

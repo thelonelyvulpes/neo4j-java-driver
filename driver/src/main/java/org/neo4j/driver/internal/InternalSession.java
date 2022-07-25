@@ -80,6 +80,22 @@ public class InternalSession extends AbstractQueryRunner implements Session {
     private QueryResult query(Query query, Function<SessionQueryConfigBuilder, SessionQueryConfigBuilder> configBuilderFunction) {
         return query(query, configBuilderFunction.apply(new SessionQueryConfigBuilder()).build());
     }
+
+    @Override
+    public QueryResult query(String query) {
+        return query(new Query(query), SessionQueryConfig.defaultInstance);
+    }
+
+    @Override
+    public QueryResult query(String query, Map<String, Object> parameters) {
+        return query(new Query(query, parameters), SessionQueryConfig.defaultInstance);
+    }
+
+    @Override
+    public QueryResult query(Query query) {
+        return query(query, SessionQueryConfig.defaultInstance);
+    }
+
     @Override
     public QueryResult query(String query, ClusterMemberAccess clusterMemberAccess) {
         return query(new Query(query), x -> x.withClusterMemberAccess(clusterMemberAccess));

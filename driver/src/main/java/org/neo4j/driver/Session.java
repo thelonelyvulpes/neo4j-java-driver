@@ -338,6 +338,9 @@ public interface Session extends Resource, QueryRunner {
     @Override
     void close();
 
+    QueryResult query(String query);
+    QueryResult query(String query, Map<String, Object> parameters);
+    QueryResult query(Query query);
     QueryResult query(String query, ClusterMemberAccess clusterMemberAccess);
     QueryResult query(String query, Map<String, Object> parameters, ClusterMemberAccess clusterMemberAccess);
     QueryResult query(Query query, ClusterMemberAccess clusterMemberAccess);

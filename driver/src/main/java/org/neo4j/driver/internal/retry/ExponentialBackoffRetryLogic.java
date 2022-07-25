@@ -92,6 +92,11 @@ public class ExponentialBackoffRetryLogic implements RetryLogic {
     }
 
     @Override
+    public EventExecutorGroup getExecutorGroup() {
+        return eventExecutorGroup;
+    }
+
+    @Override
     public <T> T retry(Supplier<T> work) {
         List<Throwable> errors = null;
         long startTime = -1;

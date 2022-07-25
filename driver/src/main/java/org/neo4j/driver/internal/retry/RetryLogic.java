@@ -20,9 +20,13 @@ package org.neo4j.driver.internal.retry;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
+
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.reactivestreams.Publisher;
 
 public interface RetryLogic {
+    EventExecutorGroup getExecutorGroup();
+
     <T> T retry(Supplier<T> work);
 
     <T> CompletionStage<T> retryAsync(Supplier<CompletionStage<T>> work);

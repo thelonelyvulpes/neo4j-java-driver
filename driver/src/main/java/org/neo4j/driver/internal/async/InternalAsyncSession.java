@@ -37,8 +37,11 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.async.*;
 import org.neo4j.driver.internal.BookmarksHolder;
 import org.neo4j.driver.internal.InternalBookmark;
+import org.neo4j.driver.internal.retry.PolicyRetryLogic;
+import org.neo4j.driver.internal.util.Clock;
 import org.neo4j.driver.internal.util.Futures;
 import org.neo4j.driver.summary.ResultSummary;
+
 
 public class InternalAsyncSession extends AsyncAbstractQueryRunner implements AsyncSession {
     private final NetworkSession session;
@@ -236,6 +239,28 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
         });
     }
 
+    private <T> CompletionStage<T> transactionAsync(
+            AccessMode mode, AsyncTransactionWork<CompletionStage<T>> work, SessionQueryConfig sessionQueryConfig) {
+        var retryLogic = new PolicyRetryLogic(Clock.SYSTEM, session.retryLogic().getExecutorGroup(),
+                sessionQueryConfig.retryFunction(), sessionQueryConfig.maxRetries());
+        return retryLogic.retryAsync(() -> {
+            CompletableFuture<T> resultFuture = new CompletableFuture<>();
+            CompletionStage<UnmanagedTransaction> txFuture =
+                    session.beginTransactionAsync(mode, sessionQueryConfig.transactionConfig());
+
+            txFuture.whenComplete((tx, completionError) -> {
+                Throwable error = Futures.completionExceptionCause(completionError);
+                if (error != null) {
+                    resultFuture.completeExceptionally(error);
+                } else {
+                    executeWork(resultFuture, tx, work);
+                }
+            });
+
+            return resultFuture;
+        });
+    }
+
     public CompletionStage<QueryResult> executeQueryAsync(Query query, SessionQueryConfig config) {
         if (!config.executeInTransaction()) {
             return switch (config.clusterMemberAccess()) {
@@ -246,19 +271,18 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
         }
         return switch (config.clusterMemberAccess()) {
             case Automatic -> ValidateCanRouteAndExecute(query, config);
-            case Readers -> executeReadAsync(
-                    x -> x.queryAsync(query, config.queryConfig()), config.transactionConfig());
-            case Writers -> executeWriteAsync(
-                    x -> x.queryAsync(query, config.queryConfig()), config.transactionConfig());
+            case Readers -> transactionAsync(AccessMode.READ, x -> x.queryAsync(query, config.queryConfig()), config);
+            case Writers -> transactionAsync(AccessMode.WRITE, x -> x.queryAsync(query, config.queryConfig()), config);
         };
     }
 
     private CompletionStage<QueryResult> ValidateCanRouteAndExecute(Query query, SessionQueryConfig config) {
         return this.session.canAutoRouteQuery().thenCompose(canRoute -> {
-            if (canRoute) {
-                return executeWriteAsync(x -> x.queryAsync(query, config.queryConfig()), config.transactionConfig()); //TODO: Support for server side routing, will need to be lower down the stack.
+            if (!canRoute) {
+                throw new IllegalStateException("Server does not support Automatic ClusterMemberAccess");
             }
-            throw new IllegalStateException("Server does not support Automatic ClusterMemberAccess");
+
+            return transactionAsync(AccessMode.WRITE, x -> x.queryAsync(query, config.queryConfig()), config); //TODO: Support for server side routing, will need to be lower down the stack.
         });
     }
 

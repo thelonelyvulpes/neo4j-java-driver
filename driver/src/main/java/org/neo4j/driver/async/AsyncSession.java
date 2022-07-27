@@ -417,4 +417,6 @@ public interface AsyncSession extends AsyncQueryRunner {
     CompletionStage<QueryResult> queryAsync(String query, Map<String, Object> parameters, SessionQueryConfig config);
     CompletionStage<QueryResult> queryAsync(Query query, SessionQueryConfig config);
 
+    <T> CompletionStage<T> executeAsync(AsyncTransactionCallback<CompletionStage<T>> callback, TxClusterMemberAccess access);
+    <T> CompletionStage<T> executeAsync(AsyncTransactionCallback<CompletionStage<T>> callback, SessionTxConfig config);
 }

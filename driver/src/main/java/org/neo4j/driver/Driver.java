@@ -19,15 +19,13 @@
 package org.neo4j.driver;
 
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
 
 import org.neo4j.driver.async.AsyncSession;
+import org.neo4j.driver.async.AsyncTransactionCallback;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.reactive.ReactiveSession;
 import org.neo4j.driver.reactive.RxSession;
-import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.TypeSystem;
 import org.neo4j.driver.util.Experimental;
 
@@ -259,4 +257,10 @@ public interface Driver extends AutoCloseable {
     QueryResult query(String query, DriverQueryConfig config);
     QueryResult query(String query, Map<String, Object> parameters, DriverQueryConfig config);
     QueryResult query(Query query, DriverQueryConfig config);
+
+    <T> T execute(TransactionCallback<T> callback, TxClusterMemberAccess access);
+    <T> T execute(TransactionCallback<T> callback, DriverTxConfig config);
+
+    <T> CompletionStage<T> executeAsync(AsyncTransactionCallback<CompletionStage<T>> callback, TxClusterMemberAccess access);
+    <T> CompletionStage<T> executeAsync(AsyncTransactionCallback<CompletionStage<T>> callback, DriverTxConfig config);
 }

@@ -347,4 +347,7 @@ public interface Session extends Resource, QueryRunner {
     QueryResult query(String query, SessionQueryConfig config);
     QueryResult query(String query, Map<String, Object> parameters, SessionQueryConfig config);
     QueryResult query(Query query, SessionQueryConfig config);
+
+    <T> T execute(TransactionCallback<T> work, TxClusterMemberAccess config);
+    <T> T execute(TransactionCallback<T> work, SessionTxConfig config);
 }

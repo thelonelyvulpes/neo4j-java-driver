@@ -127,6 +127,20 @@ public class InternalSession extends AbstractQueryRunner implements Session {
                 config.transactionConfig(), config.queryConfig());
     }
 
+    @Override
+    public <T> T execute(TransactionCallback<T> work, TxClusterMemberAccess access) {
+        var cfg = SessionTxConfig.builder().withClusterMemberAccess(access).build();
+        return execute(work, cfg);
+    }
+
+    @Override
+    public <T> T execute(TransactionCallback<T> work, SessionTxConfig config) {
+        return switch (config.clusterMemberAccess()) {
+            case Readers -> executeRead(work, config.transactionConfig());
+            case Writers -> executeWrite(work, config.transactionConfig());
+        };
+    }
+
     public QueryResult executeQuery(Query query, ClusterMemberAccess clusterMemberAccess,
                                     TransactionConfig txConfig, QueryConfig queryConfig) {
         return switch (clusterMemberAccess) {

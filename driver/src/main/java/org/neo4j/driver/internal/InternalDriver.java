@@ -20,21 +20,14 @@ package org.neo4j.driver.internal;
 
 import static org.neo4j.driver.internal.util.Futures.completedWithNull;
 
-import java.awt.print.Book;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.neo4j.driver.*;
-import org.neo4j.driver.Record;
 import org.neo4j.driver.async.AsyncSession;
-import org.neo4j.driver.async.AsyncTransactionContext;
-import org.neo4j.driver.async.ResultCursor;
+import org.neo4j.driver.async.AsyncTransactionCallback;
 import org.neo4j.driver.internal.async.InternalAsyncSession;
 import org.neo4j.driver.internal.async.NetworkSession;
 import org.neo4j.driver.internal.metrics.DevNullMetricsProvider;
@@ -46,7 +39,6 @@ import org.neo4j.driver.internal.types.InternalTypeSystem;
 import org.neo4j.driver.internal.util.Futures;
 import org.neo4j.driver.reactive.ReactiveSession;
 import org.neo4j.driver.reactive.RxSession;
-import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.TypeSystem;
 
 public class InternalDriver implements Driver {
@@ -220,7 +212,7 @@ public class InternalDriver implements Driver {
         }
         var internalSession = new InternalAsyncSession(newSession(config.sessionConfig(this.bookmarksHolder)));
         var queryFuture = internalSession.queryAsync(query, config.sessionQueryConfig());
-        var bookmarkFuture = queryFuture.thenRun(() -> updateBookmarks(internalSession));
+        var bookmarkFuture = queryFuture.thenRun(() -> updateBookmarksAsync(internalSession));
         return bookmarkFuture.thenCombine(queryFuture, (_x, result) -> result);
     }
 
@@ -297,9 +289,14 @@ public class InternalDriver implements Driver {
         return Futures.blockingGet(this.queryAsync(query, config));
     }
 
-    private CompletionStage<Void> updateBookmarks(AsyncSession asyncSession) {
+    private CompletionStage<Void> updateBookmarksAsync(AsyncSession asyncSession) {
         this.bookmarksHolder.setBookmarks(asyncSession.lastBookmarks());
         return asyncSession.closeAsync();
+    }
+
+    private void updateBookmarks(Session session) {
+        this.bookmarksHolder.setBookmarks(session.lastBookmarks());
+        session.close();
     }
 
     private QueryResult query(Query query, Function<DriverQueryConfigBuilder, DriverQueryConfigBuilder> configBuilder) {
@@ -312,4 +309,43 @@ public class InternalDriver implements Driver {
         return this.queryAsync(
                 query, configBuilder.apply(DriverQueryConfig.builder()).build());
     }
+
+    @Override
+    public <T> T execute(TransactionCallback<T> work, TxClusterMemberAccess clusterMemberAccess) {
+        var config = DriverTxConfig.builder().withClusterMemberAccess(clusterMemberAccess).build();
+        return this.execute(work, config);
+    }
+
+    @Override
+    public <T> T execute(TransactionCallback<T> work, DriverTxConfig config) {
+        var validationError = config.validate();
+        if (validationError.isPresent()) {
+            throw validationError.get();
+        }
+        var internalSession = new InternalSession(newSession(config.sessionConfig(this.bookmarksHolder)));
+        var result = internalSession.execute(work, config.sessionTxConfig());
+        updateBookmarks(internalSession);
+        return result;
+    }
+
+    @Override
+    public <T> CompletionStage<T> executeAsync(AsyncTransactionCallback<CompletionStage<T>> work,
+                                               TxClusterMemberAccess clusterMemberAccess) {
+        var cfg = DriverTxConfig.builder().withClusterMemberAccess(clusterMemberAccess).build();
+        return executeAsync(work, cfg);
+    }
+
+    @Override
+    public <T> CompletionStage<T> executeAsync(AsyncTransactionCallback<CompletionStage<T>> work,
+                                               DriverTxConfig config) {
+        var validationError = config.validate();
+        if (validationError.isPresent()) {
+            throw validationError.get();
+        }
+        var internalSession = new InternalAsyncSession(newSession(config.sessionConfig(this.bookmarksHolder)));
+        var unitOfWorkFuture = internalSession.executeAsync(work, config.sessionTxConfig());
+        var bookmarkFuture = unitOfWorkFuture.thenRun(() -> updateBookmarksAsync(internalSession));
+        return bookmarkFuture.thenCombine(unitOfWorkFuture, (_x, result) -> result);
+    }
+
 }

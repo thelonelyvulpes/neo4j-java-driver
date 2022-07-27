@@ -108,6 +108,20 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
         return this.executeQueryAsync(query, config);
     }
 
+    @Override
+    public <T> CompletionStage<T> executeAsync(AsyncTransactionCallback<CompletionStage<T>> callback, TxClusterMemberAccess access) {
+        var config = SessionTxConfig.builder().withClusterMemberAccess(access).build();
+        return this.executeAsync(callback, config);
+    }
+
+    @Override
+    public <T> CompletionStage<T> executeAsync(AsyncTransactionCallback<CompletionStage<T>> callback, SessionTxConfig config) {
+        return switch (config.clusterMemberAccess()) {
+            case Readers -> transactionAsync(AccessMode.READ, x -> callback.execute(new DelegatingAsyncTransactionContext(x)), config.transactionConfig());
+            case Writers -> transactionAsync(AccessMode.WRITE, x -> callback.execute(new DelegatingAsyncTransactionContext(x)), config.transactionConfig());
+        };
+    }
+
     private CompletionStage<QueryResult> queryAsync(
             Query query, Function<SessionQueryConfigBuilder, SessionQueryConfigBuilder> configBuilderFunction) {
         return executeQueryAsync(

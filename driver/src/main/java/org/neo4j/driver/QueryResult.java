@@ -2,6 +2,10 @@ package org.neo4j.driver;
 
 import org.neo4j.driver.summary.ResultSummary;
 
+import java.lang.reflect.Array;
+import java.util.Arrays;
+import java.util.stream.Stream;
+
 public record QueryResult(Record[] records, ResultSummary summary, String[] keys) {
     public Record single() throws IllegalStateException {
         if (records.length == 1)
@@ -19,5 +23,9 @@ public record QueryResult(Record[] records, ResultSummary summary, String[] keys
         }
 
         return record.get(0);
+    }
+
+    public Stream<Record> stream() {
+        return Arrays.stream(records);
     }
 }

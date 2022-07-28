@@ -8,6 +8,7 @@ import java.util.function.Function;
 public class DriverTxConfigBuilder {
     private String database;
     private Set<Bookmark> bookmarks;
+    private String impersonatedUser;
 
     private TxClusterMemberAccess access;
     private Integer maxRetries;
@@ -22,6 +23,7 @@ public class DriverTxConfigBuilder {
     public DriverTxConfigBuilder(DriverTxConfig config) {
         this.database = config.database();
         this.bookmarks = config.bookmarks();
+        this.impersonatedUser = config.impersonatedUser();
         this.access = config.sessionTxConfig().clusterMemberAccess();
         this.maxRetries = config.sessionTxConfig().maxRetries();
         this.timeout = config.sessionTxConfig().timeout();
@@ -41,6 +43,11 @@ public class DriverTxConfigBuilder {
 
     public DriverTxConfigBuilder withDatabase(String database) {
         this.database = database;
+        return this;
+    }
+
+    public DriverTxConfigBuilder withImpersonatedUser(String impersonatedUser) {
+        this.impersonatedUser = impersonatedUser;
         return this;
     }
 
@@ -68,6 +75,7 @@ public class DriverTxConfigBuilder {
         return new DriverTxConfig(
                 database,
                 bookmarks,
+                impersonatedUser,
                 new SessionTxConfig(
                         access,
                         timeout,

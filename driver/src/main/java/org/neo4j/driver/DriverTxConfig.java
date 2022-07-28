@@ -2,13 +2,10 @@ package org.neo4j.driver;
 
 import org.neo4j.driver.internal.BookmarksHolder;
 
-import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 
-public record DriverTxConfig(String database, Set<Bookmark> bookmarks, SessionTxConfig sessionTxConfig) {
+public record DriverTxConfig(String database, Set<Bookmark> bookmarks, String impersonatedUser, SessionTxConfig sessionTxConfig) {
 
     public static DriverTxConfigBuilder builder() {
         return new DriverTxConfigBuilder();
@@ -18,8 +15,8 @@ public record DriverTxConfig(String database, Set<Bookmark> bookmarks, SessionTx
         return new DriverTxConfigBuilder(config);
     }
 
-    public static final DriverTxConfig read = new DriverTxConfig("neo4j", null, SessionTxConfig.read);
-    public static final DriverTxConfig write = new DriverTxConfig("neo4j", null, SessionTxConfig.write);
+    public static final DriverTxConfig read = new DriverTxConfig(null, null, null, SessionTxConfig.read);
+    public static final DriverTxConfig write = new DriverTxConfig(null, null,  null, SessionTxConfig.write);
 
     public Optional<IllegalStateException> validate() {
         if (database == null || database.equals("")) {
@@ -38,6 +35,9 @@ public record DriverTxConfig(String database, Set<Bookmark> bookmarks, SessionTx
 
         if (this.database() != null)
             builder.withDatabase(this.database());
+
+        if (this.impersonatedUser() != null)
+            builder.withImpersonatedUser(this.impersonatedUser());
 
         return builder.build();
     }

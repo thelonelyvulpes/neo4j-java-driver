@@ -5,7 +5,7 @@ import org.neo4j.driver.internal.BookmarksHolder;
 import java.util.Optional;
 import java.util.Set;
 
-public record DriverQueryConfig(String database, Set<Bookmark> bookmarks, SessionQueryConfig sessionQueryConfig) {
+public record DriverQueryConfig(String database, Set<Bookmark> bookmarks, String impersonatedUser, SessionQueryConfig sessionQueryConfig) {
 
     public static DriverQueryConfigBuilder builder() {
         return new DriverQueryConfigBuilder();
@@ -15,14 +15,14 @@ public record DriverQueryConfig(String database, Set<Bookmark> bookmarks, Sessio
         return new DriverQueryConfigBuilder(config);
     }
     public static final DriverQueryConfig defaultInstance =
-            new DriverQueryConfig("neo4j", null, SessionQueryConfig.defaultInstance);
+            new DriverQueryConfig(null, null,null, SessionQueryConfig.defaultInstance);
 
-    public static final DriverQueryConfig read = new DriverQueryConfig("neo4j", null, SessionQueryConfig.read);
+    public static final DriverQueryConfig read = new DriverQueryConfig(null, null,null, SessionQueryConfig.read);
 
-    public static final DriverQueryConfig write = new DriverQueryConfig("neo4j", null, SessionQueryConfig.write);
+    public static final DriverQueryConfig write = new DriverQueryConfig(null, null,null, SessionQueryConfig.write);
 
     public static final DriverQueryConfig autoCommit =
-            new DriverQueryConfig("neo4j", null, SessionQueryConfig.autoCommit);
+            new DriverQueryConfig(null, null, null, SessionQueryConfig.autoCommit);
 
     public Optional<IllegalStateException> validate() {
         if (database == null || database.equals("")) {
@@ -41,6 +41,9 @@ public record DriverQueryConfig(String database, Set<Bookmark> bookmarks, Sessio
 
         if (this.database() != null)
             builder.withDatabase(this.database());
+
+        if (this.impersonatedUser != null)
+            builder.withImpersonatedUser(impersonatedUser);
 
         return builder.build();
     }

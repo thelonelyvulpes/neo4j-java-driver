@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 public class DriverQueryConfigBuilder {
+    private String impersonatedUser;
     private String database;
     private Set<Bookmark> bookmarks;
 
@@ -26,6 +27,7 @@ public class DriverQueryConfigBuilder {
     public DriverQueryConfigBuilder(DriverQueryConfig config) {
         this.database = config.database();
         this.bookmarks = config.bookmarks();
+        this.impersonatedUser = config.impersonatedUser();
         this.access = config.sessionQueryConfig().clusterMemberAccess();
         this.executeInTransaction = config.sessionQueryConfig().executeInTransaction();
         this.maxRetries = config.sessionQueryConfig().maxRetries();
@@ -48,6 +50,11 @@ public class DriverQueryConfigBuilder {
 
     public DriverQueryConfigBuilder withDatabase(String database) {
         this.database = database;
+        return this;
+    }
+
+    public DriverQueryConfigBuilder withImpersonatedUser(String impersonatedUser) {
+        this.impersonatedUser = impersonatedUser;
         return this;
     }
 
@@ -90,6 +97,7 @@ public class DriverQueryConfigBuilder {
         return new DriverQueryConfig(
                 database,
                 bookmarks,
+                impersonatedUser,
                 new SessionQueryConfig(
                         access,
                         executeInTransaction,

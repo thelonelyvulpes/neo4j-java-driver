@@ -314,7 +314,7 @@ class RoutingTableAndConnectionPoolTest {
         var poolSettings = new PoolSettings(10, 5000, -1, -1, OpenTelemetry.noop());
         var bootstrap = BootstrapFactory.newBootstrap(1);
         var channelTracker =
-                new NettyChannelTracker(metrics, bootstrap.config().group().next(), logging);
+                new NettyChannelTracker(metrics, bootstrap.config().group().next(), logging, settings.openTelemetry());
 
         return new TestConnectionPool(bootstrap, channelTracker, poolSettings, metrics, logging, clock, true);
     }

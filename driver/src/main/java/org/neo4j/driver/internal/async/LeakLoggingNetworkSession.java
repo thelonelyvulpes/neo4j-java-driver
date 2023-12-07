@@ -23,6 +23,8 @@ import static java.lang.System.lineSeparator;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Bookmark;
@@ -49,7 +51,7 @@ public class LeakLoggingNetworkSession extends NetworkSession {
             BookmarkManager bookmarkManager,
             NotificationConfig notificationConfig,
             AuthToken overrideAuthToken,
-            boolean telemetryDisabled) {
+            boolean telemetryDisabled, OpenTelemetry openTel) {
         super(
                 connectionProvider,
                 retryLogic,
@@ -62,7 +64,8 @@ public class LeakLoggingNetworkSession extends NetworkSession {
                 bookmarkManager,
                 notificationConfig,
                 overrideAuthToken,
-                telemetryDisabled);
+                telemetryDisabled,
+                openTel);
         this.stackTrace = captureStackTrace();
     }
 

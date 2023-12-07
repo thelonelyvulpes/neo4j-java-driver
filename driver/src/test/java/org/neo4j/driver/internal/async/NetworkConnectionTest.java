@@ -632,7 +632,7 @@ class NetworkConnectionTest {
     }
 
     private static NetworkConnection newConnection(Channel channel, ExtendedChannelPool pool) {
-        return new NetworkConnection(channel, pool, new FakeClock(), DevNullMetricsListener.INSTANCE, DEV_NULL_LOGGING);
+        return new NetworkConnection(channel, pool, new FakeClock(), DevNullMetricsListener.INSTANCE, DEV_NULL_LOGGING, openTelemetry);
     }
 
     private static void assertConnectionReleasedError(IllegalStateException e) {

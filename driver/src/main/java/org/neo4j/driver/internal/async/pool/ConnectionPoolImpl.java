@@ -42,6 +42,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
@@ -71,6 +73,7 @@ public class ConnectionPoolImpl implements ConnectionPool {
     private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
     private final ConnectionFactory connectionFactory;
     private final Clock clock;
+    private final OpenTelemetry openTelemetry;
 
     public ConnectionPoolImpl(
             ChannelConnector connector,
@@ -84,13 +87,13 @@ public class ConnectionPoolImpl implements ConnectionPool {
                 connector,
                 bootstrap,
                 new NettyChannelTracker(
-                        metricsListener, bootstrap.config().group().next(), logging),
+                        metricsListener, bootstrap.config().group().next(), logging, settings.openTelemetry()),
                 settings,
                 metricsListener,
                 logging,
                 clock,
                 ownsEventLoopGroup,
-                new NetworkConnectionFactory(clock, metricsListener, logging));
+                new NetworkConnectionFactory(clock, metricsListener, logging, settings.openTelemetry()));
     }
 
     protected ConnectionPoolImpl(
@@ -114,6 +117,7 @@ public class ConnectionPoolImpl implements ConnectionPool {
         this.ownsEventLoopGroup = ownsEventLoopGroup;
         this.connectionFactory = connectionFactory;
         this.clock = clock;
+        this.openTelemetry = settings.openTelemetry();
     }
 
     @Override
@@ -264,7 +268,8 @@ public class ConnectionPoolImpl implements ConnectionPool {
                 channelHealthCheckerSupplier.get(),
                 settings.connectionAcquisitionTimeout(),
                 settings.maxConnectionPoolSize(),
-                clock);
+                clock,
+                settings.openTelemetry());
     }
 
     private ExtendedChannelPool getOrCreatePool(BoltServerAddress address) {

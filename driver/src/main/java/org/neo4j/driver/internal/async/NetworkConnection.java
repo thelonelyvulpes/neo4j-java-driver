@@ -32,6 +32,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.internal.BoltServerAddress;
@@ -62,6 +64,7 @@ import org.neo4j.driver.internal.spi.ResponseHandler;
  */
 public class NetworkConnection implements Connection {
     private final Logger log;
+    private final OpenTelemetry openTelemetry;
     private final Lock lock;
     private final Channel channel;
     private final InboundMessageDispatcher messageDispatcher;
@@ -86,8 +89,10 @@ public class NetworkConnection implements Connection {
             ExtendedChannelPool channelPool,
             Clock clock,
             MetricsListener metricsListener,
-            Logging logging) {
+            Logging logging,
+            OpenTelemetry openTelemetry) {
         this.log = logging.getLog(getClass());
+        this.openTelemetry = openTelemetry;
         this.lock = new ReentrantLock();
         this.channel = channel;
         this.messageDispatcher = ChannelAttributes.messageDispatcher(channel);

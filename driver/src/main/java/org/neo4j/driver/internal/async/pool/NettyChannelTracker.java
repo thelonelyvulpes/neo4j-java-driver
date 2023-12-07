@@ -32,6 +32,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.internal.messaging.BoltProtocol;
@@ -50,7 +52,7 @@ public class NettyChannelTracker implements ChannelPoolHandler {
     private final ChannelFutureListener closeListener = future -> channelClosed(future.channel());
     private final ChannelGroup allChannels;
 
-    public NettyChannelTracker(MetricsListener metricsListener, EventExecutor eventExecutor, Logging logging) {
+    public NettyChannelTracker(MetricsListener metricsListener, EventExecutor eventExecutor, Logging logging, OpenTelemetry openTelemetry) {
         this(metricsListener, new DefaultChannelGroup("all-connections", eventExecutor), logging);
     }
 

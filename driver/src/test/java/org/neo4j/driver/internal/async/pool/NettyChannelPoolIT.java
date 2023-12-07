@@ -166,7 +166,7 @@ class NettyChannelPoolIT {
     @Test
     void shouldTrackActiveChannels() {
         var tracker = new NettyChannelTracker(
-                DevNullMetricsListener.INSTANCE, new ImmediateSchedulingEventExecutor(), DEV_NULL_LOGGING);
+                DevNullMetricsListener.INSTANCE, new ImmediateSchedulingEventExecutor(), DEV_NULL_LOGGING, settings.openTelemetry());
 
         poolHandler = tracker;
         pool = newPool(neo4j.authTokenManager());

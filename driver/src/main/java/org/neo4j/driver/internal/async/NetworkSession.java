@@ -31,6 +31,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Bookmark;
@@ -67,6 +69,7 @@ public class NetworkSession {
     protected final Logger log;
 
     private final long fetchSize;
+    private final OpenTelemetry openTelemetry;
     private volatile CompletionStage<UnmanagedTransaction> transactionStage = completedWithNull();
     private volatile CompletionStage<Connection> connectionStage = completedWithNull();
     private volatile CompletionStage<? extends FailableCursor> resultCursorStage = completedWithNull();
@@ -90,7 +93,8 @@ public class NetworkSession {
             BookmarkManager bookmarkManager,
             NotificationConfig notificationConfig,
             AuthToken overrideAuthToken,
-            boolean telemetryDisabled) {
+            boolean telemetryDisabled,
+            OpenTelemetry openTel) {
         Objects.requireNonNull(bookmarks, "bookmarks may not be null");
         Objects.requireNonNull(bookmarkManager, "bookmarkManager may not be null");
         this.connectionProvider = connectionProvider;
@@ -109,6 +113,7 @@ public class NetworkSession {
         this.fetchSize = fetchSize;
         this.notificationConfig = notificationConfig;
         this.telemetryDisabled = telemetryDisabled;
+        this.openTelemetry = openTel;
     }
 
     public CompletionStage<ResultCursor> runAsync(Query query, TransactionConfig config) {

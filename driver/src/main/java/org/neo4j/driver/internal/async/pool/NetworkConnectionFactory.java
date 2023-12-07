@@ -20,6 +20,8 @@ package org.neo4j.driver.internal.async.pool;
 
 import io.netty.channel.Channel;
 import java.time.Clock;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.internal.async.NetworkConnection;
 import org.neo4j.driver.internal.metrics.MetricsListener;
@@ -29,15 +31,17 @@ public class NetworkConnectionFactory implements ConnectionFactory {
     private final Clock clock;
     private final MetricsListener metricsListener;
     private final Logging logging;
+    private final OpenTelemetry openTelemetry;
 
-    public NetworkConnectionFactory(Clock clock, MetricsListener metricsListener, Logging logging) {
+    public NetworkConnectionFactory(Clock clock, MetricsListener metricsListener, Logging logging, OpenTelemetry openTelemetry) {
         this.clock = clock;
         this.metricsListener = metricsListener;
         this.logging = logging;
+        this.openTelemetry = openTelemetry;
     }
 
     @Override
     public Connection createConnection(Channel channel, ExtendedChannelPool pool) {
-        return new NetworkConnection(channel, pool, clock, metricsListener, logging);
+        return new NetworkConnection(channel, pool, clock, metricsListener, logging, openTelemetry);
     }
 }

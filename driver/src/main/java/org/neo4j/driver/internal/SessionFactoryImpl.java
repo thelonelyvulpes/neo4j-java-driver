@@ -24,6 +24,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Bookmark;
@@ -43,6 +45,7 @@ public class SessionFactoryImpl implements SessionFactory {
     private final Logging logging;
     private final boolean leakedSessionsLoggingEnabled;
     private final long defaultFetchSize;
+    private final OpenTelemetry openTel;
 
     SessionFactoryImpl(ConnectionProvider connectionProvider, RetryLogic retryLogic, Config config) {
         this.connectionProvider = connectionProvider;
@@ -50,6 +53,7 @@ public class SessionFactoryImpl implements SessionFactory {
         this.retryLogic = retryLogic;
         this.logging = config.logging();
         this.defaultFetchSize = config.fetchSize();
+        this.openTel = config.openTelemetry();
     }
 
     @Override
@@ -161,7 +165,8 @@ public class SessionFactoryImpl implements SessionFactory {
                         bookmarkManager,
                         notificationConfig,
                         authToken,
-                        telemetryDisabled)
+                        telemetryDisabled,
+                        openTel)
                 : new NetworkSession(
                         connectionProvider,
                         retryLogic,
@@ -174,6 +179,7 @@ public class SessionFactoryImpl implements SessionFactory {
                         bookmarkManager,
                         notificationConfig,
                         authToken,
-                        telemetryDisabled);
+                        telemetryDisabled,
+                        openTel);
     }
 }

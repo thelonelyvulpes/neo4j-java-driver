@@ -18,13 +18,16 @@
  */
 package org.neo4j.driver.internal.async.pool;
 
+import io.opentelemetry.api.OpenTelemetry;
+
 import java.util.concurrent.TimeUnit;
 
 public record PoolSettings(
         int maxConnectionPoolSize,
         long connectionAcquisitionTimeout,
         long maxConnectionLifetime,
-        long idleTimeBeforeConnectionTest) {
+        long idleTimeBeforeConnectionTest,
+        OpenTelemetry openTelemetry) {
     public static final int NOT_CONFIGURED = -1;
 
     public static final int DEFAULT_MAX_CONNECTION_POOL_SIZE = 100;
@@ -38,5 +41,9 @@ public record PoolSettings(
 
     public boolean maxConnectionLifetimeEnabled() {
         return maxConnectionLifetime > 0;
+    }
+
+    public OpenTelemetry openTelemetry() {
+        return openTelemetry;
     }
 }

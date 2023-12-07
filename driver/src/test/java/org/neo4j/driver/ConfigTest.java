@@ -531,4 +531,16 @@ class ConfigTest {
         // Then
         assertEquals(disabled, telemetryDisabled);
     }
+
+    @Test
+    void shouldOpenTelemetry() {
+        // Given
+        var config = Config.builder().withOpenTelemetry(null).build();
+
+        // When
+        var telemetry = config.openTelemetry();
+
+        // Then
+        assertEquals(telemetry, null);
+    }
 }

@@ -41,6 +41,7 @@ module org.neo4j.driver {
     requires io.netty.resolver;
     requires transitive java.logging;
     requires transitive org.reactivestreams;
+    requires transitive io.opentelemetry.api;
     requires static micrometer.core;
     requires static org.graalvm.nativeimage;
     requires static org.slf4j;

@@ -41,7 +41,7 @@ import org.neo4j.driver.internal.retry.ExponentialBackoffRetryLogic;
 import org.neo4j.driver.net.ServerAddressResolver;
 import org.neo4j.driver.util.Experimental;
 import org.neo4j.driver.util.Immutable;
-
+import io.opentelemetry.api.OpenTelemetry;
 /**
  * A configuration class to config driver properties.
  * <p>
@@ -154,6 +154,7 @@ public final class Config implements Serializable {
      * By default, the driver will send anonymous usage statistics to the server it connects to if the server requests those.
      */
     private final boolean telemetryDisabled;
+    private final OpenTelemetry openTelemetry;
 
     private Config(ConfigBuilder builder) {
         this.logging = builder.logging;
@@ -177,6 +178,7 @@ public final class Config implements Serializable {
         this.eventLoopThreads = builder.eventLoopThreads;
         this.metricsAdapter = builder.metricsAdapter;
         this.telemetryDisabled = builder.telemetryDisabled;
+        this.openTelemetry = builder.openTelemetry;
     }
 
     /**
@@ -356,6 +358,13 @@ public final class Config implements Serializable {
     }
 
     /**
+     * stuff
+     * @return stuff
+     */
+    public OpenTelemetry openTelemetry() {
+        return openTelemetry;
+    }
+    /**
      * Used to build new config instances
      */
     public static final class ConfigBuilder {
@@ -376,6 +385,7 @@ public final class Config implements Serializable {
         private long fetchSize = FetchSizeUtil.DEFAULT_FETCH_SIZE;
         private int eventLoopThreads = 0;
         private NotificationConfig notificationConfig = NotificationConfig.defaultConfig();
+        private OpenTelemetry openTelemetry = null;
 
         private boolean telemetryDisabled = false;
 
@@ -792,6 +802,16 @@ public final class Config implements Serializable {
          */
         public ConfigBuilder withTelemetryDisabled(boolean telemetryDisabled) {
             this.telemetryDisabled = telemetryDisabled;
+            return this;
+        }
+
+        /**
+         *
+         * @param openTelemetry stuff
+         * @return this
+         */
+        public ConfigBuilder withOpenTelemetry(OpenTelemetry openTelemetry) {
+            this.openTelemetry = openTelemetry;
             return this;
         }
 

@@ -140,7 +140,8 @@ public class DriverFactory {
                 config.maxConnectionPoolSize(),
                 config.connectionAcquisitionTimeoutMillis(),
                 config.maxConnectionLifetimeMillis(),
-                config.idleTimeBeforeConnectionTest());
+                config.idleTimeBeforeConnectionTest(),
+                config.openTelemetry());
         return new ConnectionPoolImpl(
                 connector,
                 bootstrap,

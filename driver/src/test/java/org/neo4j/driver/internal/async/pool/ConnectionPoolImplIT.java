@@ -30,6 +30,8 @@ import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import static org.neo4j.driver.testutil.TestUtil.await;
 
 import java.util.Collections;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -150,6 +152,6 @@ class ConnectionPoolImplIT {
     }
 
     private static PoolSettings newSettings() {
-        return new PoolSettings(10, 5000, -1, -1);
+        return new PoolSettings(10, 5000, -1, -1, OpenTelemetry.noop());
     }
 }

@@ -49,6 +49,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,7 +96,8 @@ class NettyChannelHealthCheckerTest {
                 DEFAULT_MAX_CONNECTION_POOL_SIZE,
                 DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
                 maxLifetime,
-                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST);
+                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST,
+                OpenTelemetry.noop());
         var clock = Clock.systemUTC();
         var healthChecker = newHealthChecker(settings, clock);
 
@@ -110,7 +113,8 @@ class NettyChannelHealthCheckerTest {
                 DEFAULT_MAX_CONNECTION_POOL_SIZE,
                 DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
                 NOT_CONFIGURED,
-                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST);
+                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST,
+                OpenTelemetry.noop());
         var healthChecker = newHealthChecker(settings, Clock.systemUTC());
 
         setCreationTimestamp(channel, 0);
@@ -138,7 +142,8 @@ class NettyChannelHealthCheckerTest {
                 DEFAULT_MAX_CONNECTION_POOL_SIZE,
                 DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
                 NOT_CONFIGURED,
-                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST);
+                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST,
+                OpenTelemetry.noop());
         var clock = mock(Clock.class);
         var healthChecker = newHealthChecker(settings, clock);
 
@@ -179,7 +184,8 @@ class NettyChannelHealthCheckerTest {
                 DEFAULT_MAX_CONNECTION_POOL_SIZE,
                 DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
                 NOT_CONFIGURED,
-                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST);
+                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST,
+                OpenTelemetry.noop());
         var clock = mock(Clock.class);
         var healthChecker = newHealthChecker(settings, clock);
 
@@ -223,7 +229,8 @@ class NettyChannelHealthCheckerTest {
                 DEFAULT_MAX_CONNECTION_POOL_SIZE,
                 DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
                 NOT_CONFIGURED,
-                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST);
+                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST,
+                OpenTelemetry.noop());
         var clock = mock(Clock.class);
         given(clock.millis()).willReturn(0L).willReturn(100L);
         var healthChecker = newHealthChecker(settings, clock);
@@ -271,7 +278,8 @@ class NettyChannelHealthCheckerTest {
                 DEFAULT_MAX_CONNECTION_POOL_SIZE,
                 DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
                 NOT_CONFIGURED,
-                idleTimeBeforeConnectionTest);
+                idleTimeBeforeConnectionTest,
+                OpenTelemetry.noop());
         var clock = Clock.systemUTC();
         var healthChecker = newHealthChecker(settings, clock);
 
@@ -298,7 +306,8 @@ class NettyChannelHealthCheckerTest {
                 DEFAULT_MAX_CONNECTION_POOL_SIZE,
                 DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
                 NOT_CONFIGURED,
-                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST);
+                DEFAULT_IDLE_TIME_BEFORE_CONNECTION_TEST,
+                OpenTelemetry.noop());
         var clock = Clock.systemUTC();
         var healthChecker = newHealthChecker(settings, clock);
 

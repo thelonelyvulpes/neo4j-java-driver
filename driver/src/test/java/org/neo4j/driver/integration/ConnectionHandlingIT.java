@@ -460,7 +460,8 @@ class ConnectionHandlingIT {
                     config.maxConnectionPoolSize(),
                     config.connectionAcquisitionTimeoutMillis(),
                     config.maxConnectionLifetimeMillis(),
-                    config.idleTimeBeforeConnectionTest());
+                    config.idleTimeBeforeConnectionTest(),
+                    config.openTelemetry());
             var clock = createClock();
             var connector = super.createConnector(
                     connectionSettings, securityPlan, config, clock, routingContext, BoltAgentUtil.VALUE);

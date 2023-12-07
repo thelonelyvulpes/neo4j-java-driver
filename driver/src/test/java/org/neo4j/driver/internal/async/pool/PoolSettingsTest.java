@@ -22,12 +22,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.api.Test;
 
 class PoolSettingsTest {
     @Test
     void idleTimeBeforeConnectionTestWhenConfigured() {
-        var settings = new PoolSettings(5, -1, 10, 42);
+        var settings = new PoolSettings(5, -1, 10, 42, OpenTelemetry.noop());
         assertTrue(settings.idleTimeBeforeConnectionTestEnabled());
         assertEquals(42, settings.idleTimeBeforeConnectionTest());
     }
@@ -35,7 +36,7 @@ class PoolSettingsTest {
     @Test
     void idleTimeBeforeConnectionTestWhenSetToZero() {
         // Always test idle time during acquisition
-        var settings = new PoolSettings(5, -1, 10, 0);
+        var settings = new PoolSettings(5, -1, 10, 0, OpenTelemetry.noop());
         assertTrue(settings.idleTimeBeforeConnectionTestEnabled());
         assertEquals(0, settings.idleTimeBeforeConnectionTest());
     }
@@ -50,7 +51,7 @@ class PoolSettingsTest {
 
     @Test
     void maxConnectionLifetimeWhenConfigured() {
-        var settings = new PoolSettings(5, -1, 42, 10);
+        var settings = new PoolSettings(5, -1, 42, 10, OpenTelemetry.noop());
         assertTrue(settings.maxConnectionLifetimeEnabled());
         assertEquals(42, settings.maxConnectionLifetime());
     }
@@ -64,12 +65,12 @@ class PoolSettingsTest {
     }
 
     private static void testIdleTimeBeforeConnectionTestWithIllegalValue(int value) {
-        var settings = new PoolSettings(5, -1, 10, value);
+        var settings = new PoolSettings(5, -1, 10, value, OpenTelemetry.noop());
         assertFalse(settings.idleTimeBeforeConnectionTestEnabled());
     }
 
     private static void testMaxConnectionLifetimeWithIllegalValue(int value) {
-        var settings = new PoolSettings(5, -1, value, 10);
+        var settings = new PoolSettings(5, -1, value, 10, OpenTelemetry.noop());
         assertFalse(settings.maxConnectionLifetimeEnabled());
     }
 }

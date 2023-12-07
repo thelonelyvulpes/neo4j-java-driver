@@ -54,6 +54,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.api.Test;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Bookmark;
@@ -309,7 +311,7 @@ class RoutingTableAndConnectionPoolTest {
 
     private ConnectionPool newConnectionPool() {
         MetricsListener metrics = DevNullMetricsListener.INSTANCE;
-        var poolSettings = new PoolSettings(10, 5000, -1, -1);
+        var poolSettings = new PoolSettings(10, 5000, -1, -1, OpenTelemetry.noop());
         var bootstrap = BootstrapFactory.newBootstrap(1);
         var channelTracker =
                 new NettyChannelTracker(metrics, bootstrap.config().group().next(), logging);

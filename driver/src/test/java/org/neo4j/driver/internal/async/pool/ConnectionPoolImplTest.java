@@ -35,6 +35,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import java.util.HashSet;
 import java.util.concurrent.ExecutionException;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -126,7 +128,7 @@ class ConnectionPoolImplTest {
     }
 
     private static PoolSettings newSettings() {
-        return new PoolSettings(10, 5000, -1, -1);
+        return new PoolSettings(10, 5000, -1, -1, OpenTelemetry.noop());
     }
 
     private static TestConnectionPool newConnectionPool(NettyChannelTracker nettyChannelTracker) {

@@ -65,6 +65,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -276,7 +278,8 @@ public final class TestUtil {
                 NoOpBookmarkManager.INSTANCE,
                 null,
                 null,
-                telemetryDisabled);
+                telemetryDisabled,
+                OpenTelemetry.noop());
     }
 
     public static void verifyRunRx(Connection connection, String query) {

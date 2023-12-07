@@ -33,6 +33,8 @@ import static org.neo4j.driver.internal.DatabaseNameUtil.defaultDatabase;
 import static org.neo4j.driver.testutil.TestUtil.DEFAULT_TEST_PROTOCOL;
 
 import java.util.Collections;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.ArgumentCaptor;
@@ -107,7 +109,8 @@ class LeakLoggingNetworkSessionTest {
                 mock(BookmarkManager.class),
                 null,
                 null,
-                true, openTel);
+                true,
+                OpenTelemetry.noop());
     }
 
     private static ConnectionProvider connectionProviderMock(boolean openConnection) {

@@ -36,6 +36,8 @@ import static org.neo4j.driver.internal.util.ValueFactory.filledPathValue;
 
 import java.util.Collections;
 import java.util.stream.Stream;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -116,7 +118,8 @@ class ParametersTest {
                 mock(BookmarkManager.class),
                 null,
                 null,
-                true);
+                true,
+                OpenTelemetry.noop());
         return new InternalSession(session);
     }
 }

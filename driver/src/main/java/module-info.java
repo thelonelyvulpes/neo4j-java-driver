@@ -47,4 +47,5 @@ module org.neo4j.driver {
     requires static org.slf4j;
     requires static java.management;
     requires static reactor.blockhound;
+    requires io.opentelemetry.context;
 }

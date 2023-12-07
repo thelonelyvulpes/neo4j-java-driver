@@ -38,6 +38,8 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+
+import io.opentelemetry.api.OpenTelemetry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -166,7 +168,7 @@ class NettyChannelPoolIT {
     @Test
     void shouldTrackActiveChannels() {
         var tracker = new NettyChannelTracker(
-                DevNullMetricsListener.INSTANCE, new ImmediateSchedulingEventExecutor(), DEV_NULL_LOGGING, settings.openTelemetry());
+                DevNullMetricsListener.INSTANCE, new ImmediateSchedulingEventExecutor(), DEV_NULL_LOGGING, OpenTelemetry.noop());
 
         poolHandler = tracker;
         pool = newPool(neo4j.authTokenManager());
@@ -211,7 +213,8 @@ class NettyChannelPoolIT {
                 nettyChannelHealthChecker,
                 1_000,
                 maxConnections,
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                OpenTelemetry.noop());
     }
 
     private static Channel acquire(NettyChannelPool pool) {

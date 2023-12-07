@@ -37,6 +37,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.Tracer;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.exceptions.UnsupportedFeatureException;
@@ -49,6 +51,7 @@ import org.neo4j.driver.internal.messaging.request.LogonMessage;
 import org.neo4j.driver.internal.security.InternalAuthToken;
 import org.neo4j.driver.internal.util.Futures;
 import org.neo4j.driver.internal.util.SessionAuthUtil;
+import io.opentelemetry.context.Scope;
 
 public class NettyChannelPool implements ExtendedChannelPool {
     /**
@@ -67,6 +70,7 @@ public class NettyChannelPool implements ExtendedChannelPool {
     private final NettyChannelHealthChecker healthChecker;
     private final Clock clock;
     private final Tracer poolTracer;
+    Span estSpan;
 
     NettyChannelPool(
             BoltServerAddress address,
@@ -78,6 +82,12 @@ public class NettyChannelPool implements ExtendedChannelPool {
             int maxConnections,
             Clock clock,
             OpenTelemetry openTelemetry) {
+        this.poolTracer = openTelemetry.getTracer("driver", "5.15.0");
+
+        estSpan = poolTracer.spanBuilder("establishing connection").startSpan();
+        var opening = estSpan.makeCurrent();
+        var span = poolTracer.spanBuilder("initialising socket").startSpan();
+        var scope = span.makeCurrent();
         requireNonNull(address);
         requireNonNull(connector);
         requireNonNull(handler);
@@ -85,7 +95,6 @@ public class NettyChannelPool implements ExtendedChannelPool {
         this.id = poolId(address);
         this.healthChecker = healthCheck;
         this.clock = clock;
-        this.poolTracer = openTelemetry.getTracer("netty-pool");
         this.delegate =
                 new FixedChannelPool(
                         bootstrap,
@@ -98,7 +107,7 @@ public class NettyChannelPool implements ExtendedChannelPool {
                         RELEASE_HEALTH_CHECK) {
                     @Override
                     protected ChannelFuture connectChannel(Bootstrap bootstrap) {
-                        var span = poolTracer.spanBuilder("establishing connection").startSpan();
+
                         var creatingEvent = handler.channelCreating(id);
                         var connectedChannelFuture = connector.connect(address, bootstrap);
                         var channel = connectedChannelFuture.channel();
@@ -107,9 +116,10 @@ public class NettyChannelPool implements ExtendedChannelPool {
                         var trackedChannelFuture = channel.newPromise();
                         connectedChannelFuture.addListener(future -> {
                             if (future.isSuccess()) {
-                                try (var scope = span.makeCurrent()) {
-                                    span.end();
-                                }
+
+                                span.end();
+                                scope.close();
+                                opening.close();
                                 // notify pool handler about a successful connection
                                 setPoolId(channel, id);
                                 handler.channelCreated(channel, creatingEvent);
@@ -118,9 +128,9 @@ public class NettyChannelPool implements ExtendedChannelPool {
                                 span.recordException(future.cause());
                                 handler.channelFailedToCreate(id);
                                 trackedChannelFuture.setFailure(future.cause());
-                                try (var scope = span.makeCurrent()) {
-                                    span.end();
-                                }
+                                span.end();
+                                scope.close();
+                                opening.close();
                             }
                         });
                         return trackedChannelFuture;
@@ -147,8 +157,9 @@ public class NettyChannelPool implements ExtendedChannelPool {
     }
 
     private CompletionStage<Channel> auth(Channel channel, AuthToken overrideAuthToken) {
+        var logging = estSpan.makeCurrent();
         var span = poolTracer.spanBuilder("logging on").startSpan();
-
+        var scope = span.makeCurrent();
         CompletionStage<Channel> authStage;
         var authContext = authContext(channel);
         if (overrideAuthToken != null) {
@@ -226,11 +237,11 @@ public class NettyChannelPool implements ExtendedChannelPool {
         }
         return authStage.handle((ignored, throwable) -> {
             if (throwable != null) {
-
-                try (var scope = span.makeCurrent()) {
-                    span.recordException(throwable);
-                    span.end();
-                }
+                span.recordException(throwable);
+                span.end();
+                scope.close();
+                estSpan.end();
+                logging.close();
                 channel.close();
                 release(channel);
                 if (throwable instanceof RuntimeException runtimeException) {
@@ -239,10 +250,10 @@ public class NettyChannelPool implements ExtendedChannelPool {
                     throw new CompletionException(throwable);
                 }
             } else {
-
-                try (var scope = span.makeCurrent()) {
-                    span.end();
-                }
+                span.end();
+                scope.close();
+                estSpan.end();
+                logging.close();
                 return channel;
             }
         });

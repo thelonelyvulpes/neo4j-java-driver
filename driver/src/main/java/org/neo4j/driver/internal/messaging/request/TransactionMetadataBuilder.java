@@ -29,6 +29,7 @@ import java.util.Set;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.internal.TemporaryBuffers;
 import io.opentelemetry.api.trace.*;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.api.trace.propagation.internal.W3CTraceContextEncoding;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.TextMapSetter;
@@ -112,10 +113,38 @@ public class TransactionMetadataBuilder {
 
         databaseName.databaseName().ifPresent(name -> result.put(DATABASE_NAME_KEY, value(name)));
 
-        span.ifPresent();
+        span.ifPresent(x -> applyCtxW3(x, result));
 
         return result;
     }
+
+    static void applyCtxW3(Span x, Map<String, Value> result) {
+        var spanContext = x.getSpanContext();
+        var TRACE_ID_HEX_SIZE = TraceId.getLength();
+        var SPAN_ID_HEX_SIZE = SpanId.getLength();
+        var TRACE_OPTION_HEX_SIZE = TraceFlags.getLength();
+        var SPAN_ID_OFFSET = 3 + TRACE_ID_HEX_SIZE + 1;
+        var TRACE_OPTION_OFFSET = SPAN_ID_OFFSET + SPAN_ID_HEX_SIZE + 1;
+        var TRACEPARENT_HEADER_SIZE = TRACE_OPTION_OFFSET + TRACE_OPTION_HEX_SIZE;
+        char[] chars = TemporaryBuffers.chars(TRACEPARENT_HEADER_SIZE);
+        chars[0] = "00".charAt(0);
+        chars[1] = "00".charAt(1);
+        chars[2] = '-';
+        String traceId = spanContext.getTraceId();
+        traceId.getChars(0, traceId.length(), chars, 3);
+        chars[SPAN_ID_OFFSET - 1] = '-';
+        String spanId = spanContext.getSpanId();
+        spanId.getChars(0, spanId.length(), chars, SPAN_ID_OFFSET);
+        chars[TRACE_OPTION_OFFSET - 1] = '-';
+        String traceFlagsHex = spanContext.getTraceFlags().asHex();
+        chars[TRACE_OPTION_OFFSET] = traceFlagsHex.charAt(0);
+        chars[TRACE_OPTION_OFFSET + 1] = traceFlagsHex.charAt(1);
+
+        result.put("traceparent", value(new String(chars, 0, TRACEPARENT_HEADER_SIZE)));
+        TraceState traceState = spanContext.getTraceState();
+        result.put("tracestate", value(W3CTraceContextEncoding.encodeTraceState(traceState)));
+    }
+
 
     void applyCtx(Span x, Map<String, Value> result) {
             System.out.println("extracting");

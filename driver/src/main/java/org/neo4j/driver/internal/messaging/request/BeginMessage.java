@@ -27,7 +27,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.internal.OtelEncodingUtils;
+import io.opentelemetry.api.trace.*;
+import io.opentelemetry.api.trace.propagation.internal.W3CTraceContextEncoding;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Logging;
@@ -35,6 +37,7 @@ import org.neo4j.driver.NotificationConfig;
 import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.internal.DatabaseName;
+import org.neo4j.driver.internal.value.MapValue;
 
 public class BeginMessage extends MessageWithMetadata {
     public static final byte SIGNATURE = 0x11;
@@ -134,4 +137,5 @@ public class BeginMessage extends MessageWithMetadata {
     public String toString() {
         return "BEGIN " + metadata();
     }
+
 }

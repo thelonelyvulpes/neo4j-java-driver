@@ -33,6 +33,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -70,7 +72,8 @@ class BeginMessageEncoderTest {
                         impersonatedUser,
                         txType,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        Span.current()),
                 packer);
 
         var order = inOrder(packer);

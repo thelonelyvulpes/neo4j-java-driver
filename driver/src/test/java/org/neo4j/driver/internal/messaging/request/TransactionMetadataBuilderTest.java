@@ -33,12 +33,10 @@ import static org.neo4j.driver.internal.messaging.request.TransactionMetadataBui
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -68,7 +66,8 @@ public class TransactionMetadataBuilderTest {
         var txTimeout = Duration.ofSeconds(7);
 
         var metadata = buildMetadata(
-                txTimeout, txMetadata, defaultDatabase(), mode, bookmarks, null, null, null, Logging.none());
+                txTimeout, txMetadata, defaultDatabase(), mode, bookmarks, null, null, null, Logging.none(),
+                Optional.of(Span.current()));
 
         Map<String, Value> expectedMetadata = new HashMap<>();
         expectedMetadata.put(
@@ -96,7 +95,8 @@ public class TransactionMetadataBuilderTest {
         var txTimeout = Duration.ofSeconds(7);
 
         var metadata = buildMetadata(
-                txTimeout, txMetadata, database(databaseName), WRITE, bookmarks, null, null, null, Logging.none());
+                txTimeout, txMetadata, database(databaseName), WRITE, bookmarks, null, null, null, Logging.none(),
+                Optional.of(Span.current()));
 
         Map<String, Value> expectedMetadata = new HashMap<>();
         expectedMetadata.put(
@@ -111,7 +111,8 @@ public class TransactionMetadataBuilderTest {
     @Test
     void shouldNotHaveMetadataForDatabaseNameWhenIsNull() {
         var metadata = buildMetadata(
-                null, null, defaultDatabase(), WRITE, Collections.emptySet(), null, null, null, Logging.none());
+                null, null, defaultDatabase(), WRITE, Collections.emptySet(), null, null, null, Logging.none(),
+                Optional.of(Span.current()));
         assertTrue(metadata.isEmpty());
     }
 
@@ -128,7 +129,8 @@ public class TransactionMetadataBuilderTest {
                 NotificationConfig.defaultConfig()
                         .enableMinimumSeverity(NotificationSeverity.WARNING)
                         .disableCategories(Set.of(NotificationCategory.UNSUPPORTED)),
-                Logging.none());
+                Logging.none(),
+                Optional.of(Span.current()));
 
         var expectedMetadata = new HashMap<String, Value>();
         expectedMetadata.put("notifications_minimum_severity", value("WARNING"));
@@ -154,7 +156,8 @@ public class TransactionMetadataBuilderTest {
                 null,
                 null,
                 null,
-                logging);
+                logging,
+                Optional.of(Span.current()));
 
         // then
         var expectedMetadata = new HashMap<String, Value>();
@@ -186,7 +189,8 @@ public class TransactionMetadataBuilderTest {
                 null,
                 null,
                 null,
-                logging);
+                logging,
+                Optional.of(Span.current()));
 
         // then
         var expectedMetadata = new HashMap<String, Value>();

@@ -33,6 +33,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -66,7 +68,8 @@ class RunWithMetadataMessageEncoderTest {
         var query = new Query("RETURN $answer", value(params));
         encoder.encode(
                 autoCommitTxRunMessage(
-                        query, txTimeout, txMetadata, defaultDatabase(), mode, bookmarks, null, null, Logging.none()),
+                        query, txTimeout, txMetadata, defaultDatabase(), mode, bookmarks, null, null, Logging.none(),
+                        Span.current()),
                 packer);
 
         var order = inOrder(packer);

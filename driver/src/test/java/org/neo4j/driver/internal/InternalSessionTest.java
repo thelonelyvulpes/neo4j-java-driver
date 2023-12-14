@@ -28,6 +28,8 @@ import static org.mockito.Mockito.mock;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -95,12 +97,12 @@ public class InternalSessionTest {
         var config = TransactionConfig.empty();
         var type = "TYPE";
         var apiTelemetryWork = new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION);
-        given(networkSession.beginTransactionAsync(config, type, apiTelemetryWork))
+        given(networkSession.beginTransactionAsync(config, type, apiTelemetryWork, Span.current()))
                 .willReturn(completedFuture(mock(UnmanagedTransaction.class)));
 
         internalSession.beginTransaction(config, type);
 
-        then(networkSession).should().beginTransactionAsync(config, type, apiTelemetryWork);
+        then(networkSession).should().beginTransactionAsync(config, type, apiTelemetryWork, Span.current());
     }
 
     static List<ExecuteVariation> executeVariations() {

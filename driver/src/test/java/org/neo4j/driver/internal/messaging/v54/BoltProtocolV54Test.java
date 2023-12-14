@@ -57,6 +57,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -524,7 +526,8 @@ public class BoltProtocolV54Test {
                     .asyncResult();
         } else {
             cursorStage = protocol.runInUnmanagedTransaction(
-                            connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE)
+                            connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE,
+                            Span.current())
                     .asyncResult();
         }
 

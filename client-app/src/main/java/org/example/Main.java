@@ -26,12 +26,13 @@ public class Main {
 
     private static void runDriver(OpenTelemetry ot, Tracer tracer) {
         var cfg = Config.builder().withOpenTelemetry(ot).build();
-
-        try (var driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.none(), cfg)) {
+        try (var driver = GraphDatabase.driver("bolt://127.0.0.1:20154", AuthTokens.none(), cfg)) {
             try (var session = driver.session()) {
-                session.executeRead(tx -> {
-                    var cursor = tx.run("RETURN 1 as n");
+                session.executeWrite(tx -> {
+                    var cursor = tx.run("CREATE (:Node)");
                     cursor.consume();
+
+                    var r = tx.run("UNWIND range(1, 10) as x return x").stream().toList();
                     return 1;
                 });
             }

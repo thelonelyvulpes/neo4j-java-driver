@@ -239,12 +239,19 @@ public class LoadBalancer implements ConnectionProvider {
             }
         });
     }
-
+    private static final Boolean forceSSR = true;
     private static List<BoltServerAddress> getAddressesByMode(AccessMode mode, RoutingTable routingTable) {
-        return switch (mode) {
-            case READ -> routingTable.readers();
-            case WRITE -> routingTable.writers();
-        };
+        if (forceSSR) {
+            return switch (mode) {
+                case READ -> routingTable.writers();
+                case WRITE -> routingTable.readers();
+            };
+        } else {
+            return switch (mode) {
+                case READ -> routingTable.readers();
+                case WRITE -> routingTable.writers();
+            };
+        }
     }
 
     private BoltServerAddress selectAddress(AccessMode mode, List<BoltServerAddress> addresses) {

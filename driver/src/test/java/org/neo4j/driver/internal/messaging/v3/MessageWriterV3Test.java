@@ -46,6 +46,8 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.stream.Stream;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.internal.BoltAgentUtil;
@@ -115,7 +117,8 @@ class MessageWriterV3Test extends AbstractMessageWriterTestBase {
                         null,
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        Span.current()),
                 new BeginMessage(
                         Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx123")),
                         ofSeconds(5),
@@ -125,7 +128,8 @@ class MessageWriterV3Test extends AbstractMessageWriterTestBase {
                         null,
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        Span.current()),
                 COMMIT,
                 ROLLBACK,
                 autoCommitTxRunMessage(
@@ -137,7 +141,8 @@ class MessageWriterV3Test extends AbstractMessageWriterTestBase {
                         Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx1")),
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        Span.current()),
                 autoCommitTxRunMessage(
                         new Query("RETURN 1"),
                         ofSeconds(5),
@@ -147,7 +152,8 @@ class MessageWriterV3Test extends AbstractMessageWriterTestBase {
                         Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx1")),
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        Span.current()),
                 unmanagedTxRunMessage(new Query("RETURN 1"), null),
                 PULL_ALL,
                 DISCARD_ALL,
@@ -163,7 +169,8 @@ class MessageWriterV3Test extends AbstractMessageWriterTestBase {
                         Collections.emptySet(),
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        Span.current()),
                 autoCommitTxRunMessage(
                         new Query("RETURN $x", singletonMap("x", value(ZonedDateTime.now()))),
                         ofSeconds(1),
@@ -173,7 +180,8 @@ class MessageWriterV3Test extends AbstractMessageWriterTestBase {
                         Collections.emptySet(),
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        Span.current()),
                 unmanagedTxRunMessage(new Query("RETURN $x", singletonMap("x", point(42, 1, 2, 3))), null));
     }
 

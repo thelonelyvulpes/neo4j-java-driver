@@ -56,6 +56,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -197,7 +199,8 @@ public class BoltProtocolV3Test {
         var connection = connectionMock(protocol);
 
         var stage = protocol.beginTransaction(
-                connection, Collections.emptySet(), TransactionConfig.empty(), null, null, Logging.none(), true);
+                connection, Collections.emptySet(), TransactionConfig.empty(), null, null, Logging.none(), true,
+                Span.current());
 
         verify(connection)
                 .writeAndFlush(
@@ -220,7 +223,8 @@ public class BoltProtocolV3Test {
         var bookmarks = Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx100"));
 
         var stage = protocol.beginTransaction(
-                connection, bookmarks, TransactionConfig.empty(), null, null, Logging.none(), true);
+                connection, bookmarks, TransactionConfig.empty(), null, null, Logging.none(), true,
+                Span.current());
 
         verify(connection)
                 .writeAndFlush(
@@ -242,7 +246,8 @@ public class BoltProtocolV3Test {
         var connection = connectionMock(protocol);
 
         var stage = protocol.beginTransaction(
-                connection, Collections.emptySet(), txConfig, null, null, Logging.none(), true);
+                connection, Collections.emptySet(), txConfig, null, null, Logging.none(), true,
+                Span.current());
 
         verify(connection)
                 .writeAndFlush(
@@ -264,7 +269,8 @@ public class BoltProtocolV3Test {
         var connection = connectionMock(protocol);
         var bookmarks = Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx4242"));
 
-        var stage = protocol.beginTransaction(connection, bookmarks, txConfig, null, null, Logging.none(), true);
+        var stage = protocol.beginTransaction(connection, bookmarks, txConfig, null, null, Logging.none(), true,
+                Span.current());
 
         verify(connection)
                 .writeAndFlush(
@@ -380,7 +386,8 @@ public class BoltProtocolV3Test {
                 null,
                 null,
                 Logging.none(),
-                true);
+                true,
+                Span.current());
 
         var e = assertThrows(ClientException.class, () -> await(txStage));
         assertThat(e.getMessage(), startsWith("Database name parameter for selecting database is not supported"));
@@ -398,7 +405,8 @@ public class BoltProtocolV3Test {
                         TransactionConfig.empty(),
                         UNLIMITED_FETCH_SIZE,
                         null,
-                        Logging.none()));
+                        Logging.none(),
+                        Span.current()));
         assertThat(e.getMessage(), startsWith("Database name parameter for selecting database is not supported"));
     }
 
@@ -425,7 +433,8 @@ public class BoltProtocolV3Test {
                             TransactionConfig.empty(),
                             UNLIMITED_FETCH_SIZE,
                             null,
-                            Logging.none()));
+                            Logging.none(),
+                            Span.current()));
         } else {
             var txStage = protocol.beginTransaction(
                     connectionMock("foo", protocol),
@@ -434,7 +443,8 @@ public class BoltProtocolV3Test {
                     null,
                     null,
                     Logging.none(),
-                    true);
+                    true,
+                    Span.current());
             e = assertThrows(ClientException.class, () -> await(txStage));
         }
 
@@ -447,7 +457,8 @@ public class BoltProtocolV3Test {
         var connection = connectionMock(mode, protocol);
 
         var cursorFuture = protocol.runInUnmanagedTransaction(
-                        connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE)
+                        connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE,
+                        Span.current())
                 .asyncResult()
                 .toCompletableFuture();
 
@@ -489,11 +500,13 @@ public class BoltProtocolV3Test {
                             config,
                             UNLIMITED_FETCH_SIZE,
                             null,
-                            Logging.none())
+                            Logging.none(),
+                            Span.current())
                     .asyncResult();
         } else {
             cursorStage = protocol.runInUnmanagedTransaction(
-                            connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE)
+                            connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE,
+                            Span.current())
                     .asyncResult();
         }
 
@@ -523,7 +536,8 @@ public class BoltProtocolV3Test {
                         config,
                         UNLIMITED_FETCH_SIZE,
                         null,
-                        Logging.none())
+                        Logging.none(),
+                        Span.current())
                 .asyncResult()
                 .toCompletableFuture();
         assertFalse(cursorFuture.isDone());
@@ -553,7 +567,8 @@ public class BoltProtocolV3Test {
                         config,
                         UNLIMITED_FETCH_SIZE,
                         null,
-                        Logging.none())
+                        Logging.none(),
+                        Span.current())
                 .asyncResult()
                 .toCompletableFuture();
         assertFalse(cursorFuture.isDone());
@@ -585,7 +600,8 @@ public class BoltProtocolV3Test {
         RunWithMetadataMessage expectedMessage;
         if (session) {
             expectedMessage = RunWithMetadataMessage.autoCommitTxRunMessage(
-                    QUERY, config, defaultDatabase(), mode, bookmarks, null, null, Logging.none());
+                    QUERY, config, defaultDatabase(), mode, bookmarks, null, null, Logging.none(),
+                    Span.current());
         } else {
             expectedMessage = RunWithMetadataMessage.unmanagedTxRunMessage(QUERY, null);
         }

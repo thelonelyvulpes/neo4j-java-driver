@@ -97,7 +97,8 @@ public class SingleDatabaseRoutingProcedureRunner implements RoutingProcedureRun
                         TransactionConfig.empty(),
                         UNLIMITED_FETCH_SIZE,
                         null,
-                        logging)
+                        logging,
+                        null)
                 .asyncResult()
                 .thenCompose(ResultCursor::listAsync);
     }

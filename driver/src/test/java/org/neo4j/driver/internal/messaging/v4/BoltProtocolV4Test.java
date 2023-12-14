@@ -573,7 +573,7 @@ public final class BoltProtocolV4Test {
     }
 
     private ResponseHandler verifyTxRunInvoked(Connection connection) {
-        return verifyRunInvoked(connection, RunWithMetadataMessage.unmanagedTxRunMessage(QUERY));
+        return verifyRunInvoked(connection, RunWithMetadataMessage.unmanagedTxRunMessage(QUERY, null));
     }
 
     private ResponseHandler verifySessionRunInvoked(

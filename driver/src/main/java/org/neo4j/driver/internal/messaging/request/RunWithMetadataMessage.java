@@ -25,7 +25,10 @@ import static org.neo4j.driver.internal.messaging.request.TransactionMetadataBui
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Logging;
@@ -49,7 +52,8 @@ public class RunWithMetadataMessage extends MessageWithMetadata {
             Set<Bookmark> bookmarks,
             String impersonatedUser,
             NotificationConfig notificationConfig,
-            Logging logging) {
+            Logging logging,
+            Span span) {
         return autoCommitTxRunMessage(
                 query,
                 config.timeout(),
@@ -59,7 +63,8 @@ public class RunWithMetadataMessage extends MessageWithMetadata {
                 bookmarks,
                 impersonatedUser,
                 notificationConfig,
-                logging);
+                logging,
+                span);
     }
 
     public static RunWithMetadataMessage autoCommitTxRunMessage(
@@ -71,7 +76,8 @@ public class RunWithMetadataMessage extends MessageWithMetadata {
             Set<Bookmark> bookmarks,
             String impersonatedUser,
             NotificationConfig notificationConfig,
-            Logging logging) {
+            Logging logging,
+            Span span) {
         var metadata = buildMetadata(
                 txTimeout,
                 txMetadata,
@@ -81,11 +87,12 @@ public class RunWithMetadataMessage extends MessageWithMetadata {
                 impersonatedUser,
                 null,
                 notificationConfig,
-                logging);
+                logging,
+                Optional.of(span));
         return new RunWithMetadataMessage(query.text(), query.parameters().asMap(ofValue()), metadata);
     }
 
-    public static RunWithMetadataMessage unmanagedTxRunMessage(Query query) {
+    public static RunWithMetadataMessage unmanagedTxRunMessage(Query query, Span span) {
         return new RunWithMetadataMessage(query.text(), query.parameters().asMap(ofValue()), emptyMap());
     }
 

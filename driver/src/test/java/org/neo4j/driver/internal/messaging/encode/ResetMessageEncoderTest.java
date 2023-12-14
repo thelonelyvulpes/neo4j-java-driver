@@ -43,6 +43,6 @@ class ResetMessageEncoderTest {
     void shouldFailToEncodeWrongMessage() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> encoder.encode(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 2")), packer));
+                () -> encoder.encode(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 2"), null), packer));
     }
 }

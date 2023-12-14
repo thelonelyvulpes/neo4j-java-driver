@@ -36,6 +36,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.NotificationConfig;
@@ -54,6 +56,16 @@ import org.neo4j.driver.internal.spi.Connection;
 import org.neo4j.driver.internal.telemetry.ApiTelemetryWork;
 
 public class UnmanagedTransaction implements TerminationAwareStateLockingExecutor {
+    private Span transactionSpan;
+
+    public void span(Span span) {
+        this.transactionSpan = span;
+    }
+
+    public Span span() {
+        return this.transactionSpan;
+    }
+
     private enum State {
         /**
          * The transaction is running with no explicit success or failure marked
@@ -111,7 +123,8 @@ public class UnmanagedTransaction implements TerminationAwareStateLockingExecuto
             long fetchSize,
             NotificationConfig notificationConfig,
             ApiTelemetryWork apiTelemetryWork,
-            Logging logging) {
+            Logging logging,
+            Span span) {
         this(
                 connection,
                 bookmarkConsumer,
@@ -119,7 +132,8 @@ public class UnmanagedTransaction implements TerminationAwareStateLockingExecuto
                 new ResultCursorsHolder(),
                 notificationConfig,
                 apiTelemetryWork,
-                logging);
+                logging,
+                span);
     }
 
     protected UnmanagedTransaction(
@@ -129,7 +143,8 @@ public class UnmanagedTransaction implements TerminationAwareStateLockingExecuto
             ResultCursorsHolder resultCursors,
             NotificationConfig notificationConfig,
             ApiTelemetryWork apiTelemetryWork,
-            Logging logging) {
+            Logging logging,
+            Span span) {
         this.connection = connection;
         this.protocol = connection.protocol();
         this.bookmarkConsumer = bookmarkConsumer;
@@ -138,6 +153,7 @@ public class UnmanagedTransaction implements TerminationAwareStateLockingExecuto
         this.notificationConfig = notificationConfig;
         this.logging = logging;
         this.apiTelemetryWork = apiTelemetryWork;
+        this.transactionSpan = span == null ? Span.current() : span;
 
         connection.bindTerminationAwareStateLockingExecutor(this);
     }
@@ -152,7 +168,7 @@ public class UnmanagedTransaction implements TerminationAwareStateLockingExecuto
             }
         });
 
-        protocol.beginTransaction(connection, initialBookmarks, config, txType, notificationConfig, logging, flush)
+        protocol.beginTransaction(connection, initialBookmarks, config, txType, notificationConfig, logging, flush, this.transactionSpan)
                 .handle((ignore, beginError) -> {
                     if (beginError != null) {
                         if (beginError instanceof AuthorizationExpiredException) {
@@ -186,9 +202,10 @@ public class UnmanagedTransaction implements TerminationAwareStateLockingExecuto
         return closeAsync(false, false);
     }
 
-    public CompletionStage<ResultCursor> runAsync(Query query) {
+    public CompletionStage<ResultCursor> runAsync(Query query, Span qspan) {
         ensureCanRunQueries();
-        var cursorStage = protocol.runInUnmanagedTransaction(connection, query, this, fetchSize)
+        var cursorStage = protocol
+                .runInUnmanagedTransaction(connection, query, this, fetchSize, qspan)
                 .asyncResult();
         resultCursors.add(cursorStage);
         return beginFuture.thenCompose(ignored -> cursorStage
@@ -198,7 +215,7 @@ public class UnmanagedTransaction implements TerminationAwareStateLockingExecuto
 
     public CompletionStage<RxResultCursor> runRx(Query query) {
         ensureCanRunQueries();
-        var cursorStage = protocol.runInUnmanagedTransaction(connection, query, this, fetchSize)
+        var cursorStage = protocol.runInUnmanagedTransaction(connection, query, this, fetchSize, null)
                 .rxResult();
         resultCursors.add(cursorStage);
         return cursorStage;

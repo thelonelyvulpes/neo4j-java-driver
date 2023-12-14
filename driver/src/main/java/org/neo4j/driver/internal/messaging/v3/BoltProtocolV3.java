@@ -33,6 +33,10 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
+
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Logging;
@@ -138,7 +142,8 @@ public class BoltProtocolV3 implements BoltProtocol {
             String txType,
             NotificationConfig notificationConfig,
             Logging logging,
-            boolean flush) {
+            boolean flush,
+            Span span) {
         var exception = verifyNotificationConfigSupported(notificationConfig);
         if (exception != null) {
             return CompletableFuture.failedStage(exception);
@@ -148,24 +153,34 @@ public class BoltProtocolV3 implements BoltProtocol {
         } catch (Exception error) {
             return Futures.failedFuture(error);
         }
-
-        var beginTxFuture = new CompletableFuture<Void>();
-        var beginMessage = new BeginMessage(
-                bookmarks,
-                config,
-                connection.databaseName(),
-                connection.mode(),
-                connection.impersonatedUser(),
-                txType,
-                notificationConfig,
-                logging);
-        var handler = new BeginTxResponseHandler(beginTxFuture);
-        if (flush) {
-            connection.writeAndFlush(beginMessage, handler);
-        } else {
-            connection.write(beginMessage, handler);
+        var ot = GlobalOpenTelemetry.get();
+        var tracer = ot.getTracer("driver", "5.15.0");
+        try (var oScope = span.makeCurrent()){
+            var beginSpan = tracer
+                    .spanBuilder("Begin tx")
+                    .setSpanKind(SpanKind.CLIENT)
+                    .startSpan();
+            try (var scope = beginSpan.makeCurrent()) {
+                var beginTxFuture = new CompletableFuture<Void>();
+                var beginMessage = new BeginMessage(
+                        bookmarks,
+                        config,
+                        connection.databaseName(),
+                        connection.mode(),
+                        connection.impersonatedUser(),
+                        txType,
+                        notificationConfig,
+                        logging,
+                        span);
+                var handler = new BeginTxResponseHandler(beginTxFuture, beginSpan);
+                if (flush) {
+                    connection.writeAndFlush(beginMessage, handler);
+                } else {
+                    connection.write(beginMessage, handler);
+                }
+                return beginTxFuture;
+            }
         }
-        return beginTxFuture;
     }
 
     @Override
@@ -191,7 +206,8 @@ public class BoltProtocolV3 implements BoltProtocol {
             TransactionConfig config,
             long fetchSize,
             NotificationConfig notificationConfig,
-            Logging logging) {
+            Logging logging,
+            Span span) {
         var exception = verifyNotificationConfigSupported(notificationConfig);
         if (exception != null) {
             throw exception;
@@ -205,14 +221,15 @@ public class BoltProtocolV3 implements BoltProtocol {
                 bookmarks,
                 connection.impersonatedUser(),
                 notificationConfig,
-                logging);
+                logging,
+                span);
         return buildResultCursorFactory(connection, query, bookmarkConsumer, null, runMessage, fetchSize);
     }
 
     @Override
     public ResultCursorFactory runInUnmanagedTransaction(
-            Connection connection, Query query, UnmanagedTransaction tx, long fetchSize) {
-        var runMessage = unmanagedTxRunMessage(query);
+            Connection connection, Query query, UnmanagedTransaction tx, long fetchSize, Span span) {
+        var runMessage = unmanagedTxRunMessage(query, span);
         return buildResultCursorFactory(connection, query, (ignored) -> {}, tx, runMessage, fetchSize);
     }
 

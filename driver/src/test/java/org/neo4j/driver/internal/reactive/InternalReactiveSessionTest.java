@@ -147,7 +147,7 @@ public class InternalReactiveSessionTest {
         var tx = mock(UnmanagedTransaction.class);
         var apiTelemetryWork = new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION);
 
-        when(session.beginTransactionAsync(any(TransactionConfig.class), isNull(), eq(apiTelemetryWork)))
+        when(session.beginTransactionAsync(any(TransactionConfig.class), isNull(), eq(apiTelemetryWork), isNull()))
                 .thenReturn(completedFuture(tx));
         var rxSession = new InternalReactiveSession(session);
 
@@ -156,7 +156,7 @@ public class InternalReactiveSessionTest {
         StepVerifier.create(Mono.from(rxTx)).expectNextCount(1).verifyComplete();
 
         // Then
-        verify(session).beginTransactionAsync(any(TransactionConfig.class), isNull(), eq(apiTelemetryWork));
+        verify(session).beginTransactionAsync(any(TransactionConfig.class), isNull(), eq(apiTelemetryWork), isNull());
     }
 
     @ParameterizedTest
@@ -168,7 +168,7 @@ public class InternalReactiveSessionTest {
         var apiTelemetryWork = new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION);
 
         // Run failed with error
-        when(session.beginTransactionAsync(any(TransactionConfig.class), isNull(), eq(apiTelemetryWork)))
+        when(session.beginTransactionAsync(any(TransactionConfig.class), isNull(), eq(apiTelemetryWork), isNull()))
                 .thenReturn(Futures.failedFuture(error));
         when(session.releaseConnectionAsync()).thenReturn(Futures.completedWithNull());
 
@@ -179,7 +179,7 @@ public class InternalReactiveSessionTest {
         var txFuture = Mono.from(rxTx).toFuture();
 
         // Then
-        verify(session).beginTransactionAsync(any(TransactionConfig.class), isNull(), eq(apiTelemetryWork));
+        verify(session).beginTransactionAsync(any(TransactionConfig.class), isNull(), eq(apiTelemetryWork), isNull());
         RuntimeException t = assertThrows(CompletionException.class, () -> Futures.getNow(txFuture));
         MatcherAssert.assertThat(t.getCause(), equalTo(error));
         verify(session).releaseConnectionAsync();
@@ -195,7 +195,7 @@ public class InternalReactiveSessionTest {
         when(tx.closeAsync(false)).thenReturn(completedWithNull());
 
         when(session.beginTransactionAsync(
-                        any(AccessMode.class), any(TransactionConfig.class), any(ApiTelemetryWork.class)))
+                        any(AccessMode.class), any(TransactionConfig.class), any(ApiTelemetryWork.class), isNull()))
                 .thenReturn(completedFuture(tx));
         when(session.retryLogic()).thenReturn(new FixedRetryLogic(retryCount));
         var rxSession = new InternalRxSession(session);
@@ -211,7 +211,7 @@ public class InternalReactiveSessionTest {
         // Then
         verify(session, times(retryCount + 1))
                 .beginTransactionAsync(
-                        any(AccessMode.class), any(TransactionConfig.class), any(ApiTelemetryWork.class));
+                        any(AccessMode.class), any(TransactionConfig.class), any(ApiTelemetryWork.class), isNull());
         verify(tx, times(retryCount + 1)).closeAsync(false);
     }
 
@@ -226,7 +226,7 @@ public class InternalReactiveSessionTest {
         when(tx.closeAsync(true)).thenReturn(completedWithNull());
 
         when(session.beginTransactionAsync(
-                        any(AccessMode.class), any(TransactionConfig.class), any(ApiTelemetryWork.class)))
+                        any(AccessMode.class), any(TransactionConfig.class), any(ApiTelemetryWork.class), isNull()))
                 .thenReturn(completedFuture(tx));
         when(session.retryLogic()).thenReturn(new FixedRetryLogic(retryCount));
         var rxSession = new InternalRxSession(session);
@@ -246,7 +246,7 @@ public class InternalReactiveSessionTest {
         // Then
         verify(session, times(retryCount + 1))
                 .beginTransactionAsync(
-                        any(AccessMode.class), any(TransactionConfig.class), any(ApiTelemetryWork.class));
+                        any(AccessMode.class), any(TransactionConfig.class), any(ApiTelemetryWork.class), isNull());
         verify(tx, times(retryCount)).closeAsync(false);
         verify(tx).closeAsync(true);
     }

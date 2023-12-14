@@ -73,29 +73,29 @@ class MessageWriterV3Test extends AbstractMessageWriterTestBase {
     protected Stream<Message> supportedMessages() {
         return Stream.of(
                 // Bolt V2 Data Types
-                unmanagedTxRunMessage(new Query("RETURN $point", singletonMap("point", point(42, 12.99, -180.0)))),
+                unmanagedTxRunMessage(new Query("RETURN $point", singletonMap("point", point(42, 12.99, -180.0))), null),
                 unmanagedTxRunMessage(
-                        new Query("RETURN $point", singletonMap("point", point(42, 0.51, 2.99, 100.123)))),
+                        new Query("RETURN $point", singletonMap("point", point(42, 0.51, 2.99, 100.123))), null),
                 unmanagedTxRunMessage(
-                        new Query("RETURN $date", singletonMap("date", value(LocalDate.ofEpochDay(2147483650L))))),
+                        new Query("RETURN $date", singletonMap("date", value(LocalDate.ofEpochDay(2147483650L)))), null),
                 unmanagedTxRunMessage(new Query(
-                        "RETURN $time", singletonMap("time", value(OffsetTime.of(4, 16, 20, 999, ZoneOffset.MIN))))),
+                        "RETURN $time", singletonMap("time", value(OffsetTime.of(4, 16, 20, 999, ZoneOffset.MIN)))), null),
                 unmanagedTxRunMessage(
-                        new Query("RETURN $time", singletonMap("time", value(LocalTime.of(12, 9, 18, 999_888))))),
+                        new Query("RETURN $time", singletonMap("time", value(LocalTime.of(12, 9, 18, 999_888)))), null),
                 unmanagedTxRunMessage(new Query(
                         "RETURN $dateTime",
-                        singletonMap("dateTime", value(LocalDateTime.of(2049, DECEMBER, 12, 17, 25, 49, 199))))),
+                        singletonMap("dateTime", value(LocalDateTime.of(2049, DECEMBER, 12, 17, 25, 49, 199)))), null),
                 unmanagedTxRunMessage(new Query(
                         "RETURN $dateTime",
                         singletonMap(
                                 "dateTime",
                                 value(ZonedDateTime.of(
-                                        2000, 1, 10, 12, 2, 49, 300, ZoneOffset.ofHoursMinutes(9, 30)))))),
+                                        2000, 1, 10, 12, 2, 49, 300, ZoneOffset.ofHoursMinutes(9, 30))))), null),
                 unmanagedTxRunMessage(new Query(
                         "RETURN $dateTime",
                         singletonMap(
                                 "dateTime",
-                                value(ZonedDateTime.of(2000, 1, 10, 12, 2, 49, 300, ZoneId.of("Europe/Stockholm")))))),
+                                value(ZonedDateTime.of(2000, 1, 10, 12, 2, 49, 300, ZoneId.of("Europe/Stockholm"))))), null),
 
                 // Bolt V3 messages
                 new HelloMessage(
@@ -148,7 +148,7 @@ class MessageWriterV3Test extends AbstractMessageWriterTestBase {
                         null,
                         null,
                         Logging.none()),
-                unmanagedTxRunMessage(new Query("RETURN 1")),
+                unmanagedTxRunMessage(new Query("RETURN 1"), null),
                 PULL_ALL,
                 DISCARD_ALL,
                 RESET,
@@ -174,7 +174,7 @@ class MessageWriterV3Test extends AbstractMessageWriterTestBase {
                         null,
                         null,
                         Logging.none()),
-                unmanagedTxRunMessage(new Query("RETURN $x", singletonMap("x", point(42, 1, 2, 3)))));
+                unmanagedTxRunMessage(new Query("RETURN $x", singletonMap("x", point(42, 1, 2, 3))), null));
     }
 
     @Override

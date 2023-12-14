@@ -72,7 +72,7 @@ class LeakLoggingNetworkSessionTest {
         var session = newSession(logging, true);
         // begin transaction to make session obtain a connection
         var apiTelemetryWork = new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION);
-        session.beginTransactionAsync(TransactionConfig.empty(), apiTelemetryWork);
+        session.beginTransactionAsync(TransactionConfig.empty(), null, apiTelemetryWork, null);
 
         finalize(session);
 

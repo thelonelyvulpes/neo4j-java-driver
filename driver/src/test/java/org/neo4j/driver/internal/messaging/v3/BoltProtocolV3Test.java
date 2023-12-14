@@ -587,7 +587,7 @@ public class BoltProtocolV3Test {
             expectedMessage = RunWithMetadataMessage.autoCommitTxRunMessage(
                     QUERY, config, defaultDatabase(), mode, bookmarks, null, null, Logging.none());
         } else {
-            expectedMessage = RunWithMetadataMessage.unmanagedTxRunMessage(QUERY);
+            expectedMessage = RunWithMetadataMessage.unmanagedTxRunMessage(QUERY, null);
         }
 
         verify(connection).write(eq(expectedMessage), runHandlerCaptor.capture());

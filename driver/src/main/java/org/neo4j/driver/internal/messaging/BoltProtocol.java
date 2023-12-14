@@ -52,6 +52,7 @@ import org.neo4j.driver.internal.messaging.v52.BoltProtocolV52;
 import org.neo4j.driver.internal.messaging.v53.BoltProtocolV53;
 import org.neo4j.driver.internal.messaging.v54.BoltProtocolV54;
 import org.neo4j.driver.internal.spi.Connection;
+import io.opentelemetry.api.trace.Span;
 
 public interface BoltProtocol {
     /**
@@ -106,7 +107,8 @@ public interface BoltProtocol {
             String txType,
             NotificationConfig notificationConfig,
             Logging logging,
-            boolean flush);
+            boolean flush,
+            Span span);
 
     /**
      * Commit the unmanaged transaction.
@@ -152,7 +154,8 @@ public interface BoltProtocol {
             TransactionConfig config,
             long fetchSize,
             NotificationConfig notificationConfig,
-            Logging logging);
+            Logging logging,
+            Span span);
 
     /**
      * Execute the given query in a running unmanaged transaction, i.e. {@link Transaction#run(Query)}.
@@ -164,7 +167,7 @@ public interface BoltProtocol {
      * @return stage with cursor.
      */
     ResultCursorFactory runInUnmanagedTransaction(
-            Connection connection, Query query, UnmanagedTransaction tx, long fetchSize);
+            Connection connection, Query query, UnmanagedTransaction tx, long fetchSize, Span span);
 
     /**
      * Returns the protocol version. It can be used for version specific error messages.

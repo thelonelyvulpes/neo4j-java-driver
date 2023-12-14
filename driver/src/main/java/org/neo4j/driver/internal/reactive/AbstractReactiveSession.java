@@ -70,7 +70,7 @@ public abstract class AbstractReactiveSession<S> {
         return createSingleItemPublisher(
                 () -> {
                     var txFuture = new CompletableFuture<S>();
-                    session.beginTransactionAsync(config, txType, apiTelemetryWork)
+                    session.beginTransactionAsync(config, txType, apiTelemetryWork, null)
                             .whenComplete((tx, completionError) -> {
                                 if (tx != null) {
                                     txFuture.complete(createTransaction(tx));
@@ -91,7 +91,7 @@ public abstract class AbstractReactiveSession<S> {
         return createSingleItemPublisher(
                 () -> {
                     var txFuture = new CompletableFuture<S>();
-                    session.beginTransactionAsync(mode, config, apiTelemetryWork)
+                    session.beginTransactionAsync(mode, config, apiTelemetryWork, null)
                             .whenComplete((tx, completionError) -> {
                                 if (tx != null) {
                                     txFuture.complete(createTransaction(tx));

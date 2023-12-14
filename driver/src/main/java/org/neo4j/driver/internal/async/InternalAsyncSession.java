@@ -82,7 +82,7 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
 
     @Override
     public CompletionStage<AsyncTransaction> beginTransactionAsync(TransactionConfig config) {
-        return session.beginTransactionAsync(config, new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION))
+        return session.beginTransactionAsync(config, null, new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION), null)
                 .thenApply(InternalAsyncTransaction::new);
     }
 
@@ -142,7 +142,7 @@ public class InternalAsyncSession extends AsyncAbstractQueryRunner implements As
         var apiTelemetryWork = new ApiTelemetryWork(TelemetryApi.MANAGED_TRANSACTION);
         return session.retryLogic().retryAsync(() -> {
             var resultFuture = new CompletableFuture<T>();
-            var txFuture = session.beginTransactionAsync(mode, config, apiTelemetryWork);
+            var txFuture = session.beginTransactionAsync(mode, config, apiTelemetryWork, null);
 
             txFuture.whenComplete((tx, completionError) -> {
                 var error = Futures.completionExceptionCause(completionError);

@@ -50,7 +50,7 @@ class TelemetryMessageEncoderTest {
     void shouldFailToEncodeWrongMessage() {
         Assertions.assertThrows(
                 IllegalArgumentException.class,
-                () -> encoder.encode(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 2")), packer));
+                () -> encoder.encode(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 2"), null), packer));
     }
 
     private static Stream<Integer> validApis() {

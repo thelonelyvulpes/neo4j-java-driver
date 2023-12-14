@@ -22,6 +22,9 @@ import static java.util.Collections.emptyMap;
 
 import java.util.Map;
 import java.util.Set;
+
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.SpanKind;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Query;
@@ -94,10 +97,15 @@ public class InternalSession extends AbstractQueryRunner implements Session {
     }
 
     public Transaction beginTransaction(TransactionConfig config, String txType) {
-        var tx = Futures.blockingGet(
-                session.beginTransactionAsync(config, txType, new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION)),
-                () -> terminateConnectionOnThreadInterrupt("Thread interrupted while starting a transaction"));
-        return new InternalTransaction(tx);
+        var ot = GlobalOpenTelemetry.get();
+        var tracer = ot.getTracer("driver", "5.15.0");
+        var span = tracer.spanBuilder("Transaction").startSpan();
+        try (var scope = span.makeCurrent()) {
+            var tx = Futures.blockingGet(
+                    session.beginTransactionAsync(config, txType, new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION), span),
+                    () -> terminateConnectionOnThreadInterrupt("Thread interrupted while starting a transaction"));
+            return new InternalTransaction(tx, span);
+        }
     }
 
     @Override
@@ -194,10 +202,18 @@ public class InternalSession extends AbstractQueryRunner implements Session {
 
     private Transaction beginTransaction(
             AccessMode mode, TransactionConfig config, ApiTelemetryWork apiTelemetryWork, boolean flush) {
-        var tx = Futures.blockingGet(
-                session.beginTransactionAsync(mode, config, null, apiTelemetryWork, flush),
-                () -> terminateConnectionOnThreadInterrupt("Thread interrupted while starting a transaction"));
-        return new InternalTransaction(tx);
+        var ot = GlobalOpenTelemetry.get();
+        var tracer = ot.getTracer("driver", "5.15.0");
+        var span = tracer
+                .spanBuilder("Transaction")
+                .setSpanKind(SpanKind.CLIENT)
+                .startSpan();
+        try (var scope = span.makeCurrent()) {
+            var tx = Futures.blockingGet(
+                    session.beginTransactionAsync(mode, config, null, apiTelemetryWork, flush, span),
+                    () -> terminateConnectionOnThreadInterrupt("Thread interrupted while starting a transaction"));
+            return new InternalTransaction(tx, span);
+        }
     }
 
     private void terminateConnectionOnThreadInterrupt(String reason) {

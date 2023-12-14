@@ -23,7 +23,11 @@ import static org.neo4j.driver.internal.messaging.request.TransactionMetadataBui
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Logging;
@@ -53,8 +57,32 @@ public class BeginMessage extends MessageWithMetadata {
                 impersonatedUser,
                 txType,
                 notificationConfig,
-                logging);
+                logging,
+                Span.current());
     }
+    public BeginMessage(
+            Set<Bookmark> bookmarks,
+            TransactionConfig config,
+            DatabaseName databaseName,
+            AccessMode mode,
+            String impersonatedUser,
+            String txType,
+            NotificationConfig notificationConfig,
+            Logging logging,
+            Span span) {
+        this(
+                bookmarks,
+                config.timeout(),
+                config.metadata(),
+                mode,
+                databaseName,
+                impersonatedUser,
+                txType,
+                notificationConfig,
+                logging,
+                span);
+    }
+
 
     public BeginMessage(
             Set<Bookmark> bookmarks,
@@ -65,7 +93,8 @@ public class BeginMessage extends MessageWithMetadata {
             String impersonatedUser,
             String txType,
             NotificationConfig notificationConfig,
-            Logging logging) {
+            Logging logging,
+            Span span) {
         super(buildMetadata(
                 txTimeout,
                 txMetadata,
@@ -75,7 +104,8 @@ public class BeginMessage extends MessageWithMetadata {
                 impersonatedUser,
                 txType,
                 notificationConfig,
-                logging));
+                logging,
+                Optional.of(span)));
     }
 
     @Override

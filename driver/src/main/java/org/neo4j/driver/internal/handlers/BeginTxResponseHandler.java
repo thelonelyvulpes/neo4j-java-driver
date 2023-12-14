@@ -23,24 +23,36 @@ import static java.util.Objects.requireNonNull;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.internal.spi.ResponseHandler;
 
 public class BeginTxResponseHandler implements ResponseHandler {
     private final CompletableFuture<Void> beginTxFuture;
+    private final Span span;
 
-    public BeginTxResponseHandler(CompletableFuture<Void> beginTxFuture) {
+    public BeginTxResponseHandler(CompletableFuture<Void> beginTxFuture, Span span) {
         this.beginTxFuture = requireNonNull(beginTxFuture);
+        this.span = span;
     }
 
     @Override
     public void onSuccess(Map<String, Value> metadata) {
-        beginTxFuture.complete(null);
+        try (var scope = span.makeCurrent()) {
+            beginTxFuture.complete(null);
+            span.end();
+        }
     }
 
     @Override
     public void onFailure(Throwable error) {
-        beginTxFuture.completeExceptionally(error);
+        try (var scope = span.makeCurrent()) {
+            beginTxFuture.completeExceptionally(error);
+            span.recordException(error);
+            span.end();
+        }
     }
 
     @Override

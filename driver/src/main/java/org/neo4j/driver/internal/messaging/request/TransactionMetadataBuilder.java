@@ -23,7 +23,10 @@ import static org.neo4j.driver.Values.value;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Logging;
@@ -51,7 +54,8 @@ public class TransactionMetadataBuilder {
             String impersonatedUser,
             String txType,
             NotificationConfig notificationConfig,
-            Logging logging) {
+            Logging logging,
+            Optional<Span> span) {
         var bookmarksPresent = !bookmarks.isEmpty();
         var txTimeoutPresent = txTimeout != null;
         var txMetadataPresent = txMetadata != null && !txMetadata.isEmpty();
@@ -60,7 +64,6 @@ public class TransactionMetadataBuilder {
         var impersonatedUserPresent = impersonatedUser != null;
         var txTypePresent = txType != null;
         var notificationConfigPresent = notificationConfig != null;
-
         if (!bookmarksPresent
                 && !txTimeoutPresent
                 && !txMetadataPresent
@@ -102,6 +105,8 @@ public class TransactionMetadataBuilder {
         MessageWithMetadata.appendNotificationConfig(result, notificationConfig);
 
         databaseName.databaseName().ifPresent(name -> result.put(DATABASE_NAME_KEY, value(name)));
+
+        span.ifPresent(value -> result.put("span", value(value.getSpanContext().getSpanId())));
 
         return result;
     }

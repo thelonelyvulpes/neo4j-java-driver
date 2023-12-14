@@ -18,6 +18,9 @@
  */
 package org.neo4j.driver.internal;
 
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Transaction;
@@ -26,22 +29,40 @@ import org.neo4j.driver.internal.util.Futures;
 
 public class InternalTransaction extends AbstractQueryRunner implements Transaction {
     private final UnmanagedTransaction tx;
+    private final Span span;
 
     public InternalTransaction(UnmanagedTransaction tx) {
         this.tx = tx;
+        this.span = Span.current();
+    }
+
+    public InternalTransaction(UnmanagedTransaction tx, Span span) {
+        this.tx = tx;
+        this.span = span;
     }
 
     @Override
     public void commit() {
         Futures.blockingGet(
-                tx.commitAsync(),
+                tx.commitAsync().thenApply(x -> {
+                    try (var scope = this.span.makeCurrent()) {
+                        this.span.end();
+                    }
+                    return x;
+                }),
                 () -> terminateConnectionOnThreadInterrupt("Thread interrupted while committing the transaction"));
     }
 
     @Override
     public void rollback() {
         Futures.blockingGet(
-                tx.rollbackAsync(),
+                tx.rollbackAsync().thenApply(x -> {
+                    try (var scope = this.span.makeCurrent()) {
+                        this.span.addEvent("rolled back");
+                        this.span.end();
+                    }
+                    return x;
+                }),
                 () -> terminateConnectionOnThreadInterrupt("Thread interrupted while rolling back the transaction"));
     }
 
@@ -54,10 +75,18 @@ public class InternalTransaction extends AbstractQueryRunner implements Transact
 
     @Override
     public Result run(Query query) {
-        var cursor = Futures.blockingGet(
-                tx.runAsync(query),
-                () -> terminateConnectionOnThreadInterrupt("Thread interrupted while running query in transaction"));
-        return new InternalResult(tx.connection(), cursor);
+        try (var scope = this.span.makeCurrent()) {
+            var tracer = GlobalOpenTelemetry.getTracer("driver", "5.15.0");
+            var qspan = tracer.spanBuilder("Query")
+                    .setSpanKind(SpanKind.CLIENT)
+                    .startSpan();
+            try (var qscope = qspan.makeCurrent()) {
+                var cursor = Futures.blockingGet(
+                        tx.runAsync(query, qspan),
+                        () -> terminateConnectionOnThreadInterrupt("Thread interrupted while running query in transaction"));
+                return new InternalResult(tx.connection(), cursor, qspan);
+            }
+        }
     }
 
     @Override
@@ -82,6 +111,10 @@ public class InternalTransaction extends AbstractQueryRunner implements Transact
     }
 
     private void terminateConnectionOnThreadInterrupt(String reason) {
+        try (var scope = this.span.makeCurrent()) {
+            this.span.addEvent(reason);
+            this.span.end();
+        }
         tx.connection().terminateAndRelease(reason);
     }
 }

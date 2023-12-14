@@ -77,29 +77,29 @@ public class MessageWriterV54Test extends AbstractMessageWriterTestBase {
     protected Stream<Message> supportedMessages() {
         return Stream.of(
                 // Bolt V2 Data Types
-                unmanagedTxRunMessage(new Query("RETURN $point", singletonMap("point", point(42, 12.99, -180.0)))),
+                unmanagedTxRunMessage(new Query("RETURN $point", singletonMap("point", point(42, 12.99, -180.0))), null),
                 unmanagedTxRunMessage(
-                        new Query("RETURN $point", singletonMap("point", point(42, 0.51, 2.99, 100.123)))),
+                        new Query("RETURN $point", singletonMap("point", point(42, 0.51, 2.99, 100.123))), null),
                 unmanagedTxRunMessage(
-                        new Query("RETURN $date", singletonMap("date", value(LocalDate.ofEpochDay(2147483650L))))),
+                        new Query("RETURN $date", singletonMap("date", value(LocalDate.ofEpochDay(2147483650L)))), null),
                 unmanagedTxRunMessage(new Query(
-                        "RETURN $time", singletonMap("time", value(OffsetTime.of(4, 16, 20, 999, ZoneOffset.MIN))))),
+                        "RETURN $time", singletonMap("time", value(OffsetTime.of(4, 16, 20, 999, ZoneOffset.MIN)))), null),
                 unmanagedTxRunMessage(
-                        new Query("RETURN $time", singletonMap("time", value(LocalTime.of(12, 9, 18, 999_888))))),
+                        new Query("RETURN $time", singletonMap("time", value(LocalTime.of(12, 9, 18, 999_888)))), null),
                 unmanagedTxRunMessage(new Query(
                         "RETURN $dateTime",
-                        singletonMap("dateTime", value(LocalDateTime.of(2049, DECEMBER, 12, 17, 25, 49, 199))))),
+                        singletonMap("dateTime", value(LocalDateTime.of(2049, DECEMBER, 12, 17, 25, 49, 199)))), null),
                 unmanagedTxRunMessage(new Query(
                         "RETURN $dateTime",
                         singletonMap(
                                 "dateTime",
                                 value(ZonedDateTime.of(
-                                        2000, 1, 10, 12, 2, 49, 300, ZoneOffset.ofHoursMinutes(9, 30)))))),
+                                        2000, 1, 10, 12, 2, 49, 300, ZoneOffset.ofHoursMinutes(9, 30))))), null),
                 unmanagedTxRunMessage(new Query(
                         "RETURN $dateTime",
                         singletonMap(
                                 "dateTime",
-                                value(ZonedDateTime.of(2000, 1, 10, 12, 2, 49, 300, ZoneId.of("Europe/Stockholm")))))),
+                                value(ZonedDateTime.of(2000, 1, 10, 12, 2, 49, 300, ZoneId.of("Europe/Stockholm"))))), null),
 
                 // New Bolt V4 messages
                 new PullMessage(100, 200),
@@ -123,7 +123,8 @@ public class MessageWriterV54Test extends AbstractMessageWriterTestBase {
                         null,
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        null),
                 new BeginMessage(
                         Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx123")),
                         ofSeconds(5),
@@ -133,7 +134,8 @@ public class MessageWriterV54Test extends AbstractMessageWriterTestBase {
                         null,
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        null),
                 COMMIT,
                 ROLLBACK,
                 RESET,
@@ -146,7 +148,8 @@ public class MessageWriterV54Test extends AbstractMessageWriterTestBase {
                         Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx1")),
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        null),
                 autoCommitTxRunMessage(
                         new Query("RETURN 1"),
                         ofSeconds(5),
@@ -156,8 +159,9 @@ public class MessageWriterV54Test extends AbstractMessageWriterTestBase {
                         Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx1")),
                         null,
                         null,
-                        Logging.none()),
-                unmanagedTxRunMessage(new Query("RETURN 1")),
+                        Logging.none(),
+                        null),
+                unmanagedTxRunMessage(new Query("RETURN 1"), null),
 
                 // Bolt V3 messages with struct values
                 autoCommitTxRunMessage(
@@ -169,7 +173,8 @@ public class MessageWriterV54Test extends AbstractMessageWriterTestBase {
                         Collections.emptySet(),
                         null,
                         null,
-                        Logging.none()),
+                        Logging.none(),
+                        null),
                 autoCommitTxRunMessage(
                         new Query("RETURN $x", singletonMap("x", value(ZonedDateTime.now()))),
                         ofSeconds(1),
@@ -179,8 +184,9 @@ public class MessageWriterV54Test extends AbstractMessageWriterTestBase {
                         Collections.emptySet(),
                         null,
                         null,
-                        Logging.none()),
-                unmanagedTxRunMessage(new Query("RETURN $x", singletonMap("x", point(42, 1, 2, 3)))),
+                        Logging.none(),
+                        null),
+                unmanagedTxRunMessage(new Query("RETURN $x", singletonMap("x", point(42, 1, 2, 3))), null),
 
                 // New 4.3 Messages
                 routeMessage(),

@@ -253,7 +253,7 @@ class NetworkSessionTest {
         setupSuccessfulRunAndPull(connection, query);
 
         var tx = beginTransaction(session);
-        await(tx.runAsync(new Query(query)));
+        await(tx.runAsync(new Query(query), null));
 
         verify(connectionProvider).acquireConnection(any(ConnectionContext.class));
         verifyRunAndPull(connection, query);
@@ -532,7 +532,7 @@ class NetworkSessionTest {
 
     private static UnmanagedTransaction beginTransaction(NetworkSession session) {
         var apiTelemetryWork = new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION);
-        return await(session.beginTransactionAsync(TransactionConfig.empty(), apiTelemetryWork));
+        return await(session.beginTransactionAsync(TransactionConfig.empty(), null, apiTelemetryWork, null));
     }
 
     private static void close(NetworkSession session) {

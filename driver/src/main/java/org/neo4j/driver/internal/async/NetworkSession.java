@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Bookmark;
@@ -137,18 +138,13 @@ public class NetworkSession {
     }
 
     public CompletionStage<UnmanagedTransaction> beginTransactionAsync(
-            TransactionConfig config, ApiTelemetryWork apiTelemetryWork) {
-        return beginTransactionAsync(mode, config, null, apiTelemetryWork, true);
+            TransactionConfig config, String txType, ApiTelemetryWork apiTelemetryWork, Span span) {
+        return beginTransactionAsync(mode, config, txType, apiTelemetryWork, true, span);
     }
 
     public CompletionStage<UnmanagedTransaction> beginTransactionAsync(
-            TransactionConfig config, String txType, ApiTelemetryWork apiTelemetryWork) {
-        return this.beginTransactionAsync(mode, config, txType, apiTelemetryWork, true);
-    }
-
-    public CompletionStage<UnmanagedTransaction> beginTransactionAsync(
-            AccessMode mode, TransactionConfig config, ApiTelemetryWork apiTelemetryWork) {
-        return beginTransactionAsync(mode, config, null, apiTelemetryWork, true);
+            AccessMode mode, TransactionConfig config, ApiTelemetryWork apiTelemetryWork, Span span) {
+        return beginTransactionAsync(mode, config, null, apiTelemetryWork, true, span);
     }
 
     public CompletionStage<UnmanagedTransaction> beginTransactionAsync(
@@ -156,7 +152,8 @@ public class NetworkSession {
             TransactionConfig config,
             String txType,
             ApiTelemetryWork apiTelemetryWork,
-            boolean flush) {
+            boolean flush,
+            Span span) {
         ensureSessionIsOpen();
 
         apiTelemetryWork.setEnabled(!telemetryDisabled);
@@ -173,7 +170,8 @@ public class NetworkSession {
                             fetchSize,
                             notificationConfig,
                             apiTelemetryWork,
-                            logging);
+                            logging,
+                            span);
                     return tx.beginAsync(determineBookmarks(true), config, txType, flush);
                 });
 
@@ -295,7 +293,8 @@ public class NetworkSession {
                                         config,
                                         fetchSize,
                                         notificationConfig,
-                                        logging);
+                                        logging,
+                                        null);
                         var future = completedFuture(factory);
                         telemetryStage.whenComplete((unused, throwable) -> {
                             if (throwable != null) {

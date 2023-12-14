@@ -121,7 +121,7 @@ class NetworkConnectionTest {
         testWriteInEventLoop(
                 "WriteSingleMessage",
                 connection -> connection.write(
-                        RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1")), NO_OP_HANDLER));
+                        RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1"), null), NO_OP_HANDLER));
     }
 
     @Test
@@ -129,7 +129,7 @@ class NetworkConnectionTest {
         testWriteInEventLoop(
                 "WriteAndFlushSingleMessage",
                 connection -> connection.writeAndFlush(
-                        RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1")), NO_OP_HANDLER));
+                        RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1"), null), NO_OP_HANDLER));
     }
 
     @Test
@@ -194,7 +194,7 @@ class NetworkConnectionTest {
         var connection = newConnection(newChannel());
 
         connection.release();
-        connection.write(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1")), handler);
+        connection.write(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1"), null), handler);
 
         var failureCaptor = ArgumentCaptor.forClass(IllegalStateException.class);
         verify(handler).onFailure(failureCaptor.capture());
@@ -207,7 +207,7 @@ class NetworkConnectionTest {
         var connection = newConnection(newChannel());
 
         connection.release();
-        connection.writeAndFlush(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1")), handler);
+        connection.writeAndFlush(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1"), null), handler);
 
         var failureCaptor = ArgumentCaptor.forClass(IllegalStateException.class);
         verify(handler).onFailure(failureCaptor.capture());
@@ -220,7 +220,7 @@ class NetworkConnectionTest {
         var connection = newConnection(newChannel());
 
         connection.terminateAndRelease("42");
-        connection.write(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1")), handler);
+        connection.write(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1"), null), handler);
 
         var failureCaptor = ArgumentCaptor.forClass(IllegalStateException.class);
         verify(handler).onFailure(failureCaptor.capture());
@@ -233,7 +233,7 @@ class NetworkConnectionTest {
         var connection = newConnection(newChannel());
 
         connection.terminateAndRelease("42");
-        connection.writeAndFlush(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1")), handler);
+        connection.writeAndFlush(RunWithMetadataMessage.unmanagedTxRunMessage(new Query("RETURN 1"), null), handler);
 
         var failureCaptor = ArgumentCaptor.forClass(IllegalStateException.class);
         verify(handler).onFailure(failureCaptor.capture());

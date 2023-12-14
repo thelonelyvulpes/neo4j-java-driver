@@ -167,7 +167,8 @@ public class BoltProtocolV52Test {
         var connection = connectionMock(protocol);
 
         var stage = protocol.beginTransaction(
-                connection, Collections.emptySet(), TransactionConfig.empty(), null, null, Logging.none(), true);
+                connection, Collections.emptySet(), TransactionConfig.empty(), null, null, Logging.none(), true,
+                null);
 
         verify(connection)
                 .writeAndFlush(
@@ -190,7 +191,8 @@ public class BoltProtocolV52Test {
         var bookmarks = Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx100"));
 
         var stage = protocol.beginTransaction(
-                connection, bookmarks, TransactionConfig.empty(), null, null, Logging.none(), true);
+                connection, bookmarks, TransactionConfig.empty(), null, null, Logging.none(), true,
+                null);
 
         verify(connection)
                 .writeAndFlush(
@@ -212,7 +214,8 @@ public class BoltProtocolV52Test {
         var connection = connectionMock(protocol);
 
         var stage = protocol.beginTransaction(
-                connection, Collections.emptySet(), txConfig, null, null, Logging.none(), true);
+                connection, Collections.emptySet(), txConfig, null, null, Logging.none(), true,
+                null);
 
         verify(connection)
                 .writeAndFlush(
@@ -234,7 +237,8 @@ public class BoltProtocolV52Test {
         var connection = connectionMock(protocol);
         var bookmarks = Collections.singleton(InternalBookmark.parse("neo4j:bookmark:v1:tx4242"));
 
-        var stage = protocol.beginTransaction(connection, bookmarks, txConfig, null, null, Logging.none(), true);
+        var stage = protocol.beginTransaction(connection, bookmarks, txConfig, null, null, Logging.none(), true,
+                null);
 
         verify(connection)
                 .writeAndFlush(
@@ -350,7 +354,8 @@ public class BoltProtocolV52Test {
                 null,
                 null,
                 Logging.none(),
-                true);
+                true,
+                null);
 
         assertDoesNotThrow(() -> await(txStage));
     }
@@ -365,7 +370,8 @@ public class BoltProtocolV52Test {
                 TransactionConfig.empty(),
                 UNLIMITED_FETCH_SIZE,
                 null,
-                Logging.none()));
+                Logging.none(),
+                null));
     }
 
     @Test
@@ -397,7 +403,8 @@ public class BoltProtocolV52Test {
                         config,
                         UNLIMITED_FETCH_SIZE,
                         null,
-                        Logging.none())
+                        Logging.none(),
+                        null)
                 .asyncResult()
                 .toCompletableFuture();
 
@@ -431,7 +438,8 @@ public class BoltProtocolV52Test {
                         config,
                         UNLIMITED_FETCH_SIZE,
                         null,
-                        Logging.none())
+                        Logging.none(),
+                        null)
                 .asyncResult()
                 .toCompletableFuture();
 
@@ -452,7 +460,8 @@ public class BoltProtocolV52Test {
         var connection = connectionMock(mode, protocol);
 
         var cursorFuture = protocol.runInUnmanagedTransaction(
-                        connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE)
+                        connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE,
+                        null)
                 .asyncResult()
                 .toCompletableFuture();
 
@@ -494,11 +503,13 @@ public class BoltProtocolV52Test {
                             config,
                             UNLIMITED_FETCH_SIZE,
                             null,
-                            Logging.none())
+                            Logging.none(),
+                            null)
                     .asyncResult();
         } else {
             cursorStage = protocol.runInUnmanagedTransaction(
-                            connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE)
+                            connection, QUERY, mock(UnmanagedTransaction.class), UNLIMITED_FETCH_SIZE,
+                            null)
                     .asyncResult();
         }
 
@@ -526,7 +537,8 @@ public class BoltProtocolV52Test {
                     TransactionConfig.empty(),
                     UNLIMITED_FETCH_SIZE,
                     null,
-                    Logging.none());
+                    Logging.none(),
+                    null);
             var resultStage = factory.asyncResult();
             var runHandler = verifySessionRunInvoked(
                     connection, Collections.emptySet(), TransactionConfig.empty(), AccessMode.WRITE, database("foo"));
@@ -536,14 +548,15 @@ public class BoltProtocolV52Test {
                     connection, Collections.emptySet(), TransactionConfig.empty(), AccessMode.WRITE, database("foo"));
         } else {
             var txStage = protocol.beginTransaction(
-                    connection, Collections.emptySet(), TransactionConfig.empty(), null, null, Logging.none(), true);
+                    connection, Collections.emptySet(), TransactionConfig.empty(), null, null, Logging.none(), true,
+                    null);
             await(txStage);
             verifyBeginInvoked(connection, Collections.emptySet(), TransactionConfig.empty(), database("foo"));
         }
     }
 
     private ResponseHandler verifyTxRunInvoked(Connection connection) {
-        return verifyRunInvoked(connection, RunWithMetadataMessage.unmanagedTxRunMessage(QUERY));
+        return verifyRunInvoked(connection, RunWithMetadataMessage.unmanagedTxRunMessage(QUERY, null));
     }
 
     private ResponseHandler verifySessionRunInvoked(
@@ -553,7 +566,8 @@ public class BoltProtocolV52Test {
             AccessMode mode,
             DatabaseName databaseName) {
         var runMessage = RunWithMetadataMessage.autoCommitTxRunMessage(
-                QUERY, config, databaseName, mode, bookmark, null, null, Logging.none());
+                QUERY, config, databaseName, mode, bookmark, null, null, Logging.none(),
+                null);
         return verifyRunInvoked(connection, runMessage);
     }
 

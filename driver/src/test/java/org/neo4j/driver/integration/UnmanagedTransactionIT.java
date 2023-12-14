@@ -79,7 +79,7 @@ class UnmanagedTransactionIT {
 
     private UnmanagedTransaction beginTransaction(NetworkSession session) {
         var apiTelemetryWork = new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION);
-        return await(session.beginTransactionAsync(TransactionConfig.empty(), apiTelemetryWork));
+        return await(session.beginTransactionAsync(TransactionConfig.empty(), null, apiTelemetryWork, null));
     }
 
     private ResultCursor sessionRun(NetworkSession session, Query query) {
@@ -87,7 +87,7 @@ class UnmanagedTransactionIT {
     }
 
     private void txRun(UnmanagedTransaction tx, String query) {
-        await(tx.runAsync(new Query(query)));
+        await(tx.runAsync(new Query(query), null));
     }
 
     @Test
@@ -178,8 +178,8 @@ class UnmanagedTransactionIT {
         var e = assertThrows(TransactionTerminatedException.class, () -> await(tx1.commitAsync()));
         assertThat(e.getMessage(), startsWith("Transaction can't be committed"));
 
-        await(session.beginTransactionAsync(TransactionConfig.empty(), apiTelemetryWork)
-                .thenCompose(tx -> tx.runAsync(new Query("CREATE (:Node {id: 42})"))
+        await(session.beginTransactionAsync(TransactionConfig.empty(), null, apiTelemetryWork, null)
+                .thenCompose(tx -> tx.runAsync(new Query("CREATE (:Node {id: 42})"), null)
                         .thenCompose(ResultCursor::consumeAsync)
                         .thenApply(ignore -> tx))
                 .thenCompose(UnmanagedTransaction::commitAsync));

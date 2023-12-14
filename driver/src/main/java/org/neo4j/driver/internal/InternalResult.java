@@ -25,6 +25,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.async.ResultCursor;
@@ -37,10 +39,19 @@ import org.neo4j.driver.summary.ResultSummary;
 public class InternalResult implements Result {
     private final Connection connection;
     private final ResultCursor cursor;
+    private final Span span;
+    private int counter = 0;
 
     public InternalResult(Connection connection, ResultCursor cursor) {
         this.connection = connection;
         this.cursor = cursor;
+        this.span = Span.current();
+    }
+
+    public InternalResult(Connection connection, ResultCursor cursor, Span qspan) {
+        this.connection = connection;
+        this.cursor = cursor;
+        this.span = qspan;
     }
 
     @Override
@@ -50,13 +61,24 @@ public class InternalResult implements Result {
 
     @Override
     public boolean hasNext() {
-        return blockingGet(cursor.peekAsync()) != null;
+        var res = blockingGet(cursor.peekAsync()) != null;
+        if (!res) {
+            try (var scope = this.span.makeCurrent()) {
+                this.span.end();
+            }
+        }
+        return res;
     }
 
     @Override
     public Record next() {
+        this.counter++;
         var record = blockingGet(cursor.nextAsync());
         if (record == null) {
+            try (var scope = this.span.makeCurrent()) {
+                this.span.setAttribute("records", this.counter);
+                this.span.end();
+            }
             throw new NoSuchRecordException("No more records");
         }
         return record;
@@ -94,7 +116,13 @@ public class InternalResult implements Result {
 
     @Override
     public ResultSummary consume() {
-        return blockingGet(cursor.consumeAsync());
+        return blockingGet(cursor.consumeAsync().thenApply(x -> {
+            try (var scope = this.span.makeCurrent()){
+                this.span.addEvent("Cursor Consumed");
+                this.span.end();
+            }
+            return x;
+        }));
     }
 
     @Override

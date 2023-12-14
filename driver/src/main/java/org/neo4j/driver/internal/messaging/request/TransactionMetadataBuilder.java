@@ -26,7 +26,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.internal.TemporaryBuffers;
+import io.opentelemetry.api.trace.*;
+import io.opentelemetry.api.trace.propagation.internal.W3CTraceContextEncoding;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.propagation.TextMapSetter;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Logging;
@@ -34,6 +39,7 @@ import org.neo4j.driver.NotificationConfig;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.internal.DatabaseName;
 import org.neo4j.driver.internal.util.Iterables;
+import org.neo4j.driver.internal.value.StringValue;
 
 public class TransactionMetadataBuilder {
     private static final String BOOKMARKS_METADATA_KEY = "bookmarks";
@@ -106,8 +112,20 @@ public class TransactionMetadataBuilder {
 
         databaseName.databaseName().ifPresent(name -> result.put(DATABASE_NAME_KEY, value(name)));
 
-        span.ifPresent(value -> result.put("span", value(value.getSpanContext().getSpanId())));
+        span.ifPresent();
 
         return result;
+    }
+
+    void applyCtx(Span x, Map<String, Value> result) {
+            System.out.println("extracting");
+            try (var xScope = x.makeCurrent()) {
+                GlobalOpenTelemetry
+                        .getPropagators()
+                        .getTextMapPropagator()
+                        .inject(Context.current(), result, (f, s, s1) -> {
+                            f.put(s, value(s1));
+                        });
+            }
     }
 }

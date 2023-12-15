@@ -153,7 +153,12 @@ public class NettyChannelPool implements ExtendedChannelPool {
 
     @Override
     public CompletionStage<Channel> acquire(AuthToken overrideAuthToken) {
-        return asCompletionStage(delegate.acquire()).thenCompose(channel -> auth(channel, overrideAuthToken));
+        var current = Span.current();
+        return asCompletionStage(delegate.acquire()).thenCompose(channel -> {
+            try (var scope = current.makeCurrent()) {
+                return auth(channel, overrideAuthToken);
+            }
+        });
     }
 
     private CompletionStage<Channel> auth(Channel channel, AuthToken overrideAuthToken) {

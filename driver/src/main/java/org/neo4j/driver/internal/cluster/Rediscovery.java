@@ -22,6 +22,8 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.internal.BoltServerAddress;
@@ -48,7 +50,8 @@ public interface Rediscovery {
             ConnectionPool connectionPool,
             Set<Bookmark> bookmarks,
             String impersonatedUser,
-            AuthToken overrideAuthToken);
+            AuthToken overrideAuthToken,
+            Span span);
 
     List<BoltServerAddress> resolve() throws UnknownHostException;
 }

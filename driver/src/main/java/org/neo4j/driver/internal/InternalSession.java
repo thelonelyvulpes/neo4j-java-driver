@@ -177,27 +177,33 @@ public class InternalSession extends AbstractQueryRunner implements Session {
             TransactionConfig config,
             TelemetryApi telemetryApi,
             boolean flush) {
+
         // use different code path compared to async so that work is executed in the caller thread
         // caller thread will also be the one who sleeps between retries;
         // it is unsafe to execute retries in the event loop threads because this can cause a deadlock
         // event loop thread will bock and wait for itself to read some data
         var apiTelemetryWork = new ApiTelemetryWork(telemetryApi);
-        return session.retryLogic().retry(() -> {
-            try (var tx = beginTransaction(mode, config, apiTelemetryWork, flush)) {
+        var span = GlobalOpenTelemetry.getTracer("Driver", "5.15").spanBuilder("TxFunc").startSpan();
+        try (var scope = span.makeCurrent()) {
+            var r = session.retryLogic().retry(() -> {
+                try (var tx = beginTransaction(mode, config, apiTelemetryWork, flush)) {
 
-                var result = work.execute(tx);
-                if (result instanceof Result) {
-                    throw new ClientException(String.format(
-                            "%s is not a valid return value, it should be consumed before producing a return value",
-                            Result.class.getName()));
+                    var result = work.execute(tx);
+                    if (result instanceof Result) {
+                        throw new ClientException(String.format(
+                                "%s is not a valid return value, it should be consumed before producing a return value",
+                                Result.class.getName()));
+                    }
+                    if (tx.isOpen()) {
+                        // commit tx if a user has not explicitly committed or rolled back the transaction
+                        tx.commit();
+                    }
+                    return result;
                 }
-                if (tx.isOpen()) {
-                    // commit tx if a user has not explicitly committed or rolled back the transaction
-                    tx.commit();
-                }
-                return result;
-            }
-        });
+            });
+            span.end();
+            return r;
+        }
     }
 
     private Transaction beginTransaction(

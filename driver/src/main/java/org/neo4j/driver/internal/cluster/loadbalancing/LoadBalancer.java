@@ -34,6 +34,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.context.Scope;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Logger;
@@ -105,8 +110,14 @@ public class LoadBalancer implements ConnectionProvider {
 
     @Override
     public CompletionStage<Connection> acquireConnection(ConnectionContext context) {
-        return routingTables.ensureRoutingTable(context).thenCompose(handler -> acquire(
-                        context.mode(), handler.routingTable(), context.overrideAuthToken())
+        var span = GlobalOpenTelemetry
+                .getTracer("driver", "5.15")
+                .spanBuilder("lb-conn")
+                .setSpanKind(SpanKind.CLIENT)
+                .startSpan();
+
+        return routingTables.ensureRoutingTable(context)
+                .thenCompose(handler -> acquire(context.mode(), handler.routingTable(), context.overrideAuthToken(), span)
                 .thenApply(connection -> new RoutingConnection(
                         connection,
                         Futures.joinNowOrElseThrow(
@@ -194,10 +205,10 @@ public class LoadBalancer implements ConnectionProvider {
     }
 
     private CompletionStage<Connection> acquire(
-            AccessMode mode, RoutingTable routingTable, AuthToken overrideAuthToken) {
+            AccessMode mode, RoutingTable routingTable, AuthToken overrideAuthToken, Span span) {
         var result = new CompletableFuture<Connection>();
         List<Throwable> attemptExceptions = new ArrayList<>();
-        acquire(mode, routingTable, result, overrideAuthToken, attemptExceptions);
+        acquire(mode, routingTable, result, overrideAuthToken, attemptExceptions, span);
         return result;
     }
 
@@ -206,7 +217,8 @@ public class LoadBalancer implements ConnectionProvider {
             RoutingTable routingTable,
             CompletableFuture<Connection> result,
             AuthToken overrideAuthToken,
-            List<Throwable> attemptErrors) {
+            List<Throwable> attemptErrors,
+            Span span) {
         var addresses = getAddressesByMode(mode, routingTable);
         var address = selectAddress(mode, addresses);
 
@@ -230,16 +242,23 @@ public class LoadBalancer implements ConnectionProvider {
                     routingTable.forget(address);
                     eventExecutorGroup
                             .next()
-                            .execute(() -> acquire(mode, routingTable, result, overrideAuthToken, attemptErrors));
+                            .execute(() -> acquire(mode, routingTable, result, overrideAuthToken, attemptErrors, span));
                 } else {
-                    result.completeExceptionally(error);
+                    try (Scope scope = span.makeCurrent()) {
+                        span.recordException(error);
+                        span.end();
+                        result.completeExceptionally(error);
+                    }
                 }
             } else {
-                result.complete(connection);
+                try (Scope scope = span.makeCurrent()) {
+                    span.end();
+                    result.complete(connection);
+                }
             }
         });
     }
-    private static final Boolean forceSSR = true;
+    public static Boolean forceSSR = false;
     private static List<BoltServerAddress> getAddressesByMode(AccessMode mode, RoutingTable routingTable) {
         if (forceSSR) {
             return switch (mode) {
@@ -255,10 +274,17 @@ public class LoadBalancer implements ConnectionProvider {
     }
 
     private BoltServerAddress selectAddress(AccessMode mode, List<BoltServerAddress> addresses) {
-        return switch (mode) {
-            case READ -> loadBalancingStrategy.selectReader(addresses);
-            case WRITE -> loadBalancingStrategy.selectWriter(addresses);
-        };
+        if (forceSSR) {
+            return switch (mode) {
+                case READ -> loadBalancingStrategy.selectWriter(addresses);
+                case WRITE -> loadBalancingStrategy.selectReader(addresses);
+            };
+        } else {
+            return switch (mode) {
+                case READ -> loadBalancingStrategy.selectReader(addresses);
+                case WRITE -> loadBalancingStrategy.selectWriter(addresses);
+            };
+        }
     }
 
     private static RoutingTableRegistry createRoutingTables(

@@ -25,6 +25,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.internal.BoltServerAddress;
@@ -89,7 +91,8 @@ public class RoutingTableHandlerImpl implements RoutingTableHandler {
                             connectionPool,
                             context.rediscoveryBookmarks(),
                             null,
-                            context.overrideAuthToken())
+                            context.overrideAuthToken(),
+                            Span.current())
                     .whenComplete((composition, completionError) -> {
                         var error = Futures.completionExceptionCause(completionError);
                         if (error != null) {

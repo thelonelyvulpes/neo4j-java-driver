@@ -123,7 +123,6 @@ public class ConnectionPoolImpl implements ConnectionPool {
     @Override
     public CompletionStage<Connection> acquire(BoltServerAddress address, AuthToken overrideAuthToken) {
         log.trace("Acquiring a connection from pool towards %s", address);
-
         assertNotClosed();
         var pool = getOrCreatePool(address);
 

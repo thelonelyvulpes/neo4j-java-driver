@@ -33,6 +33,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.internal.BoltServerAddress;
@@ -85,7 +87,8 @@ public class RoutingTableRegistryImpl implements RoutingTableRegistry {
 
     @Override
     public CompletionStage<RoutingTableHandler> ensureRoutingTable(ConnectionContext context) {
-        return ensureDatabaseNameIsCompleted(context).thenCompose(ctxAndHandler -> {
+        var span = Span.current();
+        return ensureDatabaseNameIsCompleted(context, span).thenCompose(ctxAndHandler -> {
             var completedContext = ctxAndHandler.context();
             var handler = ctxAndHandler.handler() != null
                     ? ctxAndHandler.handler()
@@ -95,7 +98,7 @@ public class RoutingTableRegistryImpl implements RoutingTableRegistry {
         });
     }
 
-    private CompletionStage<ConnectionContextAndHandler> ensureDatabaseNameIsCompleted(ConnectionContext context) {
+    private CompletionStage<ConnectionContextAndHandler> ensureDatabaseNameIsCompleted(ConnectionContext context, Span span) {
         CompletionStage<ConnectionContextAndHandler> contextAndHandlerStage;
         var contextDatabaseNameFuture = context.databaseNameFuture();
 
@@ -124,7 +127,8 @@ public class RoutingTableRegistryImpl implements RoutingTableRegistry {
                                         connectionPool,
                                         context.rediscoveryBookmarks(),
                                         impersonatedUser,
-                                        context.overrideAuthToken())
+                                        context.overrideAuthToken(),
+                                        span)
                                 .thenCompose(compositionLookupResult -> {
                                     var databaseName = DatabaseNameUtil.database(compositionLookupResult
                                             .getClusterComposition()

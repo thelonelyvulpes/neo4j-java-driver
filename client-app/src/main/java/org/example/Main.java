@@ -1,6 +1,7 @@
 package org.example;
 
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -12,6 +13,7 @@ import io.opentelemetry.semconv.ResourceAttributes;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.SessionConfig;
 
 public class Main {
 
@@ -26,16 +28,22 @@ public class Main {
 
     private static void runDriver(OpenTelemetry ot, Tracer tracer) {
         var cfg = Config.builder().withOpenTelemetry(ot).build();
-        try (var driver = GraphDatabase.driver("bolt://127.0.0.1:20154", AuthTokens.none(), cfg)) {
-            try (var session = driver.session()) {
-                session.executeWrite(tx -> {
-                    var cursor = tx.run("CREATE (:Node)");
-                    cursor.consume();
+        var appSpan = tracer.spanBuilder("complete work").setSpanKind(SpanKind.CLIENT).startSpan();
 
-                    var r = tx.run("UNWIND range(1, 10) as x return x").stream().toList();
-                    return 1;
-                });
+        try (var scope = appSpan.makeCurrent()) {
+            try (var driver = GraphDatabase.driver("neo4j://127.0.0.1:20455", AuthTokens.none(), cfg)) {
+                org.neo4j.driver.internal.cluster.loadbalancing.LoadBalancer.forceSSR = false;
+                try (var session = driver.session()) {
+                    session.executeWrite(tx -> {
+                        var cursor = tx.run("CREATE (:Node)");
+                        cursor.consume();
+
+                        var r = tx.run("UNWIND range(1, 10) as x return x").stream().toList();
+                        return 1;
+                    });
+                }
             }
+            appSpan.end();
         }
     }
 

@@ -103,6 +103,7 @@ public class NetworkSession {
         this.retryLogic = retryLogic;
         this.logging = logging;
         this.log = new PrefixedLogger("[" + hashCode() + "]", logging.getLog(getClass()));
+        var currentSPan = Span.current();
         var databaseNameFuture = databaseName
                 .databaseName()
                 .map(ignored -> CompletableFuture.completedFuture(databaseName))
@@ -157,10 +158,9 @@ public class NetworkSession {
         ensureSessionIsOpen();
 
         apiTelemetryWork.setEnabled(!telemetryDisabled);
-
         // create a chain that acquires connection and starts a transaction
         var newTransactionStage = ensureNoOpenTxBeforeStartingTx()
-                .thenCompose(ignore -> acquireConnection(mode))
+                .thenCompose(ignore -> acquireConnection(mode, span))
                 .thenApply(connection ->
                         ImpersonationUtil.ensureImpersonationSupport(connection, connection.impersonatedUser()))
                 .thenCompose(connection -> {
@@ -275,7 +275,7 @@ public class NetworkSession {
         ensureSessionIsOpen();
 
         return ensureNoOpenTxBeforeRunningQuery()
-                .thenCompose(ignore -> acquireConnection(mode))
+                .thenCompose(ignore -> acquireConnection(mode, null))
                 .thenApply(connection ->
                         ImpersonationUtil.ensureImpersonationSupport(connection, connection.impersonatedUser()))
                 .thenCompose(connection -> {
@@ -308,9 +308,8 @@ public class NetworkSession {
                 });
     }
 
-    private CompletionStage<Connection> acquireConnection(AccessMode mode) {
+    private CompletionStage<Connection> acquireConnection(AccessMode mode, Span span) {
         var currentConnectionStage = connectionStage;
-
         var newConnectionStage = resultCursorStage
                 .thenCompose(cursor -> {
                     if (cursor == null) {
@@ -338,7 +337,9 @@ public class NetworkSession {
                         // there somehow is an existing open connection, this should not happen, just a precondition
                         throw new IllegalStateException("Existing open connection detected");
                     }
-                    return connectionProvider.acquireConnection(connectionContext.contextWithMode(mode));
+                    try (var scope = span.makeCurrent()) {
+                        return connectionProvider.acquireConnection(connectionContext.contextWithMode(mode));
+                    }
                 });
 
         connectionStage = newConnectionStage.exceptionally(error -> null);

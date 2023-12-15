@@ -20,15 +20,15 @@ package org.neo4j.driver.internal.messaging.request;
 
 import static java.util.Collections.emptyMap;
 import static org.neo4j.driver.Values.ofValue;
+import static org.neo4j.driver.Values.value;
 import static org.neo4j.driver.internal.messaging.request.TransactionMetadataBuilder.buildMetadata;
 
 import java.time.Duration;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
-import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.internal.TemporaryBuffers;
+import io.opentelemetry.api.trace.*;
+import io.opentelemetry.api.trace.propagation.internal.W3CTraceContextEncoding;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Logging;
@@ -93,7 +93,35 @@ public class RunWithMetadataMessage extends MessageWithMetadata {
     }
 
     public static RunWithMetadataMessage unmanagedTxRunMessage(Query query, Span span) {
-        return new RunWithMetadataMessage(query.text(), query.parameters().asMap(ofValue()), emptyMap());
+        return new RunWithMetadataMessage(query.text(), query.parameters().asMap(ofValue()), applyCtxW3(span, new HashMap<>(2)));
+    }
+
+    static Map<String, Value> applyCtxW3(Span x, Map<String, Value> result) {
+        var spanContext = x.getSpanContext();
+        var TRACE_ID_HEX_SIZE = TraceId.getLength();
+        var SPAN_ID_HEX_SIZE = SpanId.getLength();
+        var TRACE_OPTION_HEX_SIZE = TraceFlags.getLength();
+        var SPAN_ID_OFFSET = 3 + TRACE_ID_HEX_SIZE + 1;
+        var TRACE_OPTION_OFFSET = SPAN_ID_OFFSET + SPAN_ID_HEX_SIZE + 1;
+        var TRACEPARENT_HEADER_SIZE = TRACE_OPTION_OFFSET + TRACE_OPTION_HEX_SIZE;
+        char[] chars = TemporaryBuffers.chars(TRACEPARENT_HEADER_SIZE);
+        chars[0] = "00".charAt(0);
+        chars[1] = "00".charAt(1);
+        chars[2] = '-';
+        String traceId = spanContext.getTraceId();
+        traceId.getChars(0, traceId.length(), chars, 3);
+        chars[SPAN_ID_OFFSET - 1] = '-';
+        String spanId = spanContext.getSpanId();
+        spanId.getChars(0, spanId.length(), chars, SPAN_ID_OFFSET);
+        chars[TRACE_OPTION_OFFSET - 1] = '-';
+        String traceFlagsHex = spanContext.getTraceFlags().asHex();
+        chars[TRACE_OPTION_OFFSET] = traceFlagsHex.charAt(0);
+        chars[TRACE_OPTION_OFFSET + 1] = traceFlagsHex.charAt(1);
+
+        result.put("traceparent", value(new String(chars, 0, TRACEPARENT_HEADER_SIZE)));
+        TraceState traceState = spanContext.getTraceState();
+        result.put("tracestate", value(W3CTraceContextEncoding.encodeTraceState(traceState)));
+        return result;
     }
 
     private RunWithMetadataMessage(String query, Map<String, Value> parameters, Map<String, Value> metadata) {

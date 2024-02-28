@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,6 +78,7 @@ public class GetFeatures implements TestkitRequest {
             "Optimization:ResultListFetchAll",
             "Feature:API:Result.Single",
             "Feature:API:Driver.ExecuteQuery",
+            "Feature:API:Driver.ExecuteQuery:WithAuth",
             "Feature:API:Driver.VerifyAuthentication",
             "Optimization:ExecuteQueryPipelining"));
 

@@ -5,7 +5,7 @@
 
   <groupId>org.neo4j.driver</groupId>
   <artifactId>neo4j-java-driver-parent</artifactId>
-  <version>5.15-SNAPSHOT</version>
+  <version>5.17-SNAPSHOT</version>
 
   <packaging>pom</packaging>
   <name>Neo4j Java Driver Project</name>
@@ -36,27 +36,27 @@
     <!-- Please note that when updating this dependency -->
     <!-- (i.e. due to a security vulnerability or bug) that the -->
     <!-- corresponding server dependency also needs updating.-->
-    <netty-bom.version>4.1.100.Final</netty-bom.version>
+    <netty-bom.version>4.1.106.Final</netty-bom.version>
     <!-- Please note that when updating this dependency -->
     <!-- (i.e. due to a security vulnerability or bug) that the -->
     <!-- corresponding server dependency also needs updating.-->
-    <reactor-bom.version>2022.0.12</reactor-bom.version>
+    <reactor-bom.version>2023.0.2</reactor-bom.version>
     <slf4j-api.version>1.7.36</slf4j-api.version>
     <hamcrest.version>2.2</hamcrest.version>
-    <mockito-core.version>5.6.0</mockito-core.version>
-    <junit.version>5.10.0</junit.version>
+    <mockito-core.version>5.8.0</mockito-core.version>
+    <junit.version>5.10.1</junit.version>
     <!-- supply a newer version than the one supplied by the reactive-streams 1.0.4 -->
-    <testng.version>7.8.0</testng.version>
+    <testng.version>7.9.0</testng.version>
     <jarchivelib.version>1.2.0</jarchivelib.version>
-    <bouncycastle-jdk18on.version>1.76</bouncycastle-jdk18on.version>
-    <logback-classic.version>1.2.12</logback-classic.version>
-    <jackson.version>2.15.3</jackson.version>
+    <bouncycastle-jdk18on.version>1.77</bouncycastle-jdk18on.version>
+    <logback-classic.version>1.2.13</logback-classic.version>
+    <jackson.version>2.16.1</jackson.version>
     <lombok.version>1.18.30</lombok.version>
-    <svm.version>23.1.1</svm.version>
-    <micrometer.version>1.11.5</micrometer.version>
+    <svm.version>23.1.2</svm.version>
+    <micrometer.version>1.12.2</micrometer.version>
     <blockhound.version>1.0.8.RELEASE</blockhound.version>
-    <testcontainers.version>1.19.1</testcontainers.version>
-    <build-resources.version>5.11.0</build-resources.version>
+    <testcontainers.version>1.19.3</testcontainers.version>
+    <build-resources.version>5.16.0</build-resources.version>
     <!-- To be overwritten by child projects -->
     <moduleName/>
   </properties>
@@ -67,7 +67,8 @@
     <module>examples</module>
     <module>testkit-backend</module>
     <module>testkit-tests</module>
-      <module>client-app</module>
+    <module>benchkit-backend</module>
+    <module>client-app</module>
   </modules>
 
   <licenses>
@@ -470,7 +471,7 @@
           <version>3.0</version>
           <configuration>
             <strictCheck>true</strictCheck>
-            <header>${rootDir}/build/license-header.txt</header>
+            <header>license/neo4j_apache_v2/header.txt</header>
             <mapping>
               <java>SLASHSTAR_STYLE</java>
             </mapping>
@@ -505,7 +506,7 @@
             <failIfDisliked>true</failIfDisliked>
             <failIfMissing>true</failIfMissing>
             <plainTextReport>true</plainTextReport>
-            <prependText>licensing/notice-asl-prefix.txt</prependText>
+            <prependText>licensing/notice-apache2-prefix.txt</prependText>
             <excludedGroups>
               ^((org.neo4j.driver){1})$
             </excludedGroups>

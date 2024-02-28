@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +19,7 @@ package org.neo4j.driver;
 import java.util.concurrent.CompletionStage;
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.exceptions.UnsupportedFeatureException;
 import org.neo4j.driver.reactive.ReactiveSession;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.types.TypeSystem;
@@ -145,7 +144,7 @@ public interface Driver extends AutoCloseable {
      * Instantiate a new session of a supported type with the supplied {@link AuthToken}.
      * <p>
      * This method allows creating a session with a different {@link AuthToken} to the one used on the driver level.
-     * The minimum Bolt protocol version is 5.1. An {@link IllegalStateException} will be emitted on session interaction
+     * The minimum Bolt protocol version is 5.1. An {@link UnsupportedFeatureException} will be emitted on session interaction
      * for previous Bolt versions.
      * <p>
      * Supported types are:
@@ -216,7 +215,7 @@ public interface Driver extends AutoCloseable {
      * {@link AuthToken}.
      * <p>
      * This method allows creating a session with a different {@link AuthToken} to the one used on the driver level.
-     * The minimum Bolt protocol version is 5.1. An {@link IllegalStateException} will be emitted on session interaction
+     * The minimum Bolt protocol version is 5.1. An {@link UnsupportedFeatureException} will be emitted on session interaction
      * for previous Bolt versions.
      * <p>
      * Supported types are:

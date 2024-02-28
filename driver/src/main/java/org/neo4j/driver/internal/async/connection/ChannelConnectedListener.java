@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +17,15 @@
 package org.neo4j.driver.internal.async.connection;
 
 import static java.lang.String.format;
-import static org.neo4j.driver.internal.async.connection.BoltProtocolUtil.handshakeBuf;
 import static org.neo4j.driver.internal.async.connection.BoltProtocolUtil.handshakeString;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
+import javax.net.ssl.SSLHandshakeException;
 import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
+import org.neo4j.driver.exceptions.SecurityException;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.internal.BoltServerAddress;
 import org.neo4j.driver.internal.logging.ChannelActivityLogger;
@@ -59,7 +58,18 @@ public class ChannelConnectedListener implements ChannelFutureListener {
             var pipeline = channel.pipeline();
             pipeline.addLast(new HandshakeHandler(pipelineBuilder, handshakeCompletedPromise, logging));
             log.debug("C: [Bolt Handshake] %s", handshakeString());
-            channel.writeAndFlush(handshakeBuf(), channel.voidPromise());
+            channel.writeAndFlush(BoltProtocolUtil.handshakeBuf()).addListener(f -> {
+                if (!f.isSuccess()) {
+                    var error = f.cause();
+                    if (error instanceof SSLHandshakeException) {
+                        error = new SecurityException("Failed to establish secured connection with the server", error);
+                    } else {
+                        error = new ServiceUnavailableException(
+                                String.format("Unable to write Bolt handshake to %s.", this.address), error);
+                    }
+                    this.handshakeCompletedPromise.setFailure(error);
+                }
+            });
         } else {
             handshakeCompletedPromise.setFailure(databaseUnavailableError(address, future.cause()));
         }

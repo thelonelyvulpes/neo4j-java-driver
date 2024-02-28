@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +17,15 @@
 package neo4j.org.testkit.backend.messages.requests;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.io.Serializable;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import lombok.Getter;
 import lombok.Setter;
+import neo4j.org.testkit.backend.AuthTokenUtil;
 import neo4j.org.testkit.backend.TestkitState;
 import neo4j.org.testkit.backend.messages.requests.deserializer.TestkitCypherParamDeserializer;
 import neo4j.org.testkit.backend.messages.responses.EagerResult;
@@ -65,10 +67,22 @@ public class ExecuteQuery implements TestkitRequest {
                     bookmarkManagerId.equals("-1") ? null : testkitState.getBookmarkManager(bookmarkManagerId);
             configBuilder.withBookmarkManager(bookmarkManager);
         }
+
+        Optional.ofNullable(data.getConfig().getTimeout())
+                .map(Duration::ofMillis)
+                .ifPresent(configBuilder::withTimeout);
+
+        Optional.ofNullable(data.getConfig().getTxMeta()).ifPresent(configBuilder::withMetadata);
+
+        var authToken = data.getConfig().getAuthorizationToken() != null
+                ? AuthTokenUtil.parseAuthToken(data.getConfig().getAuthorizationToken())
+                : null;
+
         var params = data.getParams() != null ? data.getParams() : Collections.<String, Object>emptyMap();
         var eagerResult = driver.executableQuery(data.getCypher())
                 .withParameters(params)
                 .withConfig(configBuilder.build())
+                .withAuthToken(authToken)
                 .execute();
 
         return EagerResult.builder()
@@ -123,5 +137,11 @@ public class ExecuteQuery implements TestkitRequest {
         private String routing;
         private String impersonatedUser;
         private String bookmarkManagerId;
+        private Long timeout;
+
+        @JsonDeserialize(using = TestkitCypherParamDeserializer.class)
+        private Map<String, Serializable> txMeta;
+
+        private AuthorizationToken authorizationToken;
     }
 }

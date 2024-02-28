@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -215,7 +213,7 @@ public final class TransactionConfig implements Serializable {
          * @param metadata the metadata.
          * @return this builder.
          */
-        public Builder withMetadata(Map<String, Object> metadata) {
+        public Builder withMetadata(Map<String, ?> metadata) {
             requireNonNull(metadata, "Transaction metadata should not be null");
             metadata.values()
                     .forEach(Extract::assertParameter); // Just assert valid parameters but don't create a value map yet

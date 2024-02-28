@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +53,7 @@ class EncryptionIT {
 
     @Test
     void shouldFailWithoutEncryptionWhenItIsRequiredInTheDatabase() {
-        testMismatchingEncryption(BoltTlsLevel.REQUIRED, false);
+        testMismatchingEncryption(BoltTlsLevel.REQUIRED, false, "Connection to the database terminated");
     }
 
     @Test
@@ -70,7 +68,7 @@ class EncryptionIT {
 
     @Test
     void shouldFailWithEncryptionWhenItIsDisabledInTheDatabase() {
-        testMismatchingEncryption(BoltTlsLevel.DISABLED, true);
+        testMismatchingEncryption(BoltTlsLevel.DISABLED, true, "Unable to write Bolt handshake to");
     }
 
     @Test
@@ -106,7 +104,7 @@ class EncryptionIT {
         }
     }
 
-    private void testMismatchingEncryption(BoltTlsLevel tlsLevel, boolean driverEncrypted) {
+    private void testMismatchingEncryption(BoltTlsLevel tlsLevel, boolean driverEncrypted, String errorMessage) {
         Map<String, String> tlsConfig = new HashMap<>();
         tlsConfig.put(Neo4jSettings.BOLT_TLS_LEVEL, tlsLevel.toString());
         neo4j.deleteAndStartNeo4j(tlsConfig);
@@ -117,7 +115,7 @@ class EncryptionIT {
                         neo4j.uri(), neo4j.authTokenManager(), config)
                 .verifyConnectivity());
 
-        assertThat(e.getMessage(), startsWith("Connection to the database terminated"));
+        assertThat(e.getMessage(), startsWith(errorMessage));
     }
 
     private static Config newConfig(boolean withEncryption) {

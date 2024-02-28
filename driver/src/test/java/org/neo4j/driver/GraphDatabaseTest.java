@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +28,7 @@ import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.URI;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.internal.security.StaticAuthTokenManager;
@@ -94,6 +93,7 @@ class GraphDatabaseTest {
     }
 
     @Test
+    @Disabled("TLS actually fails, the test setup is not valid")
     void shouldFailToCreateEncryptedDriverWhenServerDoesNotRespond() throws IOException {
         testFailureWhenServerDoesNotRespond(true);
     }

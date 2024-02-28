@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,7 +83,7 @@ public class InternalDriver implements Driver {
 
     @Override
     public ExecutableQuery executableQuery(String query) {
-        return new InternalExecutableQuery(this, new Query(query), QueryConfig.defaultConfig());
+        return new InternalExecutableQuery(this, new Query(query), QueryConfig.defaultConfig(), null);
     }
 
     @Override

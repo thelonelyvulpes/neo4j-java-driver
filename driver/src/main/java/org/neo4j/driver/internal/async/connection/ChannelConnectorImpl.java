@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,7 +142,11 @@ public class ChannelConnectorImpl implements ChannelConnector {
 
         // remove timeout handler from the pipeline once TLS and Bolt handshakes are completed. regular protocol
         // messages will flow next and we do not want to have read timeout for them
-        handshakeCompleted.addListener(future -> pipeline.remove(ConnectTimeoutHandler.class));
+        handshakeCompleted.addListener(future -> {
+            if (future.isSuccess()) {
+                pipeline.remove(ConnectTimeoutHandler.class);
+            }
+        });
 
         // add listener that sends an INIT message. connection is now fully established. channel pipeline if fully
         // set to send/receive messages for a selected protocol version

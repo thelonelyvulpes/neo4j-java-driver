@@ -1,8 +1,6 @@
 /*
  * Copyright (c) "Neo4j"
- * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
+ * Neo4j Sweden AB [https://neo4j.com]
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +40,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.neo4j.driver.AuthTokenManager;
@@ -160,6 +159,7 @@ class ChannelConnectorImplIT {
     }
 
     @Test
+    @Disabled("TLS actually fails, the test setup is not valid")
     void shouldFailWhenTLSHandshakeTakesTooLong() throws Exception {
         // run with TLS so that TLS handshake is the very first operation after connection is established
         testReadTimeoutOnConnect(trustAllCertificates());

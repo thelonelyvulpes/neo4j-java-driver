@@ -268,7 +268,8 @@ class NettyChannelHealthCheckerTest {
                 DEFAULT_MAX_CONNECTION_POOL_SIZE,
                 DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
                 NOT_CONFIGURED,
-                idleTimeBeforeConnectionTest);
+                idleTimeBeforeConnectionTest,
+                null);
         var clock = Clock.systemUTC();
         var healthChecker = newHealthChecker(settings, clock);
 
@@ -300,7 +301,8 @@ class NettyChannelHealthCheckerTest {
                 DEFAULT_MAX_CONNECTION_POOL_SIZE,
                 DEFAULT_CONNECTION_ACQUISITION_TIMEOUT,
                 NOT_CONFIGURED,
-                idleTimeBeforeConnectionTest);
+                idleTimeBeforeConnectionTest,
+                null);
         var clock = Clock.systemUTC();
         var healthChecker = newHealthChecker(settings, clock);
 

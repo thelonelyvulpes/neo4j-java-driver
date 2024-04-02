@@ -54,6 +54,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Bookmark;
@@ -99,7 +100,7 @@ class RoutingTableAndConnectionPoolTest {
         // Given
         var connectionPool = newConnectionPool();
         var rediscovery = mock(Rediscovery.class);
-        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any(), any()))
                 .thenReturn(clusterComposition(A));
         var routingTables = newRoutingTables(connectionPool, rediscovery);
         var loadBalancer = newLoadBalancer(connectionPool, routingTables);
@@ -119,7 +120,7 @@ class RoutingTableAndConnectionPoolTest {
         // Given
         var connectionPool = newConnectionPool();
         var rediscovery = mock(Rediscovery.class);
-        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any(), any()))
                 .thenReturn(Futures.failedFuture(new FatalDiscoveryException("No database found")));
         var routingTables = newRoutingTables(connectionPool, rediscovery);
         var loadBalancer = newLoadBalancer(connectionPool, routingTables);
@@ -140,7 +141,7 @@ class RoutingTableAndConnectionPoolTest {
         // Given
         var connectionPool = newConnectionPool();
         var rediscovery = mock(Rediscovery.class);
-        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any(), any()))
                 .thenReturn(Futures.failedFuture(new ProtocolException("No database found")));
         var routingTables = newRoutingTables(connectionPool, rediscovery);
         var loadBalancer = newLoadBalancer(connectionPool, routingTables);
@@ -160,7 +161,7 @@ class RoutingTableAndConnectionPoolTest {
         // Given
         var connectionPool = newConnectionPool();
         var rediscovery = mock(Rediscovery.class);
-        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any(), any()))
                 .thenReturn(Futures.failedFuture(new SecurityException("No database found")));
         var routingTables = newRoutingTables(connectionPool, rediscovery);
         var loadBalancer = newLoadBalancer(connectionPool, routingTables);
@@ -180,7 +181,7 @@ class RoutingTableAndConnectionPoolTest {
         // Given
         var connectionPool = newConnectionPool();
         var rediscovery = mock(Rediscovery.class);
-        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any(), any()))
                 .thenReturn(expiredClusterComposition(A));
         var routingTables = newRoutingTables(connectionPool, rediscovery);
         var loadBalancer = newLoadBalancer(connectionPool, routingTables);
@@ -203,7 +204,7 @@ class RoutingTableAndConnectionPoolTest {
         // Given
         var connectionPool = newConnectionPool();
         var rediscovery = mock(Rediscovery.class);
-        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any(), any()))
                 .thenReturn(expiredClusterComposition(A))
                 .thenReturn(clusterComposition(B));
         var routingTables = newRoutingTables(connectionPool, rediscovery);
@@ -229,7 +230,7 @@ class RoutingTableAndConnectionPoolTest {
         // Given
         var connectionPool = newConnectionPool();
         var rediscovery = mock(Rediscovery.class);
-        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any(), any()))
                 .thenReturn(expiredClusterComposition(A))
                 .thenReturn(clusterComposition(B));
         var routingTables = newRoutingTables(connectionPool, rediscovery);
@@ -356,7 +357,8 @@ class RoutingTableAndConnectionPoolTest {
                 ConnectionPool connectionPool,
                 Set<Bookmark> bookmarks,
                 String impersonatedUser,
-                AuthToken overrideAuthToken) {
+                AuthToken overrideAuthToken,
+                Span ignored) {
             // when looking up a new routing table, we return a valid random routing table back
             var servers = IntStream.range(0, 3)
                     .map(i -> random.nextInt(SERVERS.size()))

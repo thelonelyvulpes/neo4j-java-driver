@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.neo4j.driver</groupId>
         <artifactId>neo4j-java-driver-parent</artifactId>
-        <version>5.15-SNAPSHOT</version>
+        <version>5.17-SNAPSHOT</version>
     </parent>
 
     <groupId>org.example</groupId>
@@ -71,5 +71,4 @@
             <version>${project.version}</version>
         </dependency>
     </dependencies>
-
 </project>

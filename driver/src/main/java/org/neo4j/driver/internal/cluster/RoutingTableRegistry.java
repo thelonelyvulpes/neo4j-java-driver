@@ -19,6 +19,8 @@ package org.neo4j.driver.internal.cluster;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.internal.BoltServerAddress;
 import org.neo4j.driver.internal.DatabaseName;
 import org.neo4j.driver.internal.async.ConnectionContext;
@@ -33,7 +35,7 @@ public interface RoutingTableRegistry {
      * For server version lower than 4.0, the database name will be ignored while refreshing routing table.
      * @return The future of a new routing table handler.
      */
-    CompletionStage<RoutingTableHandler> ensureRoutingTable(ConnectionContext context);
+    CompletionStage<RoutingTableHandler> ensureRoutingTable(ConnectionContext context, Span span);
 
     /**
      * @return all servers in the registry

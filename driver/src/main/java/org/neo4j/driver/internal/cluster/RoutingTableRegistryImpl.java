@@ -84,8 +84,7 @@ public class RoutingTableRegistryImpl implements RoutingTableRegistry {
     }
 
     @Override
-    public CompletionStage<RoutingTableHandler> ensureRoutingTable(ConnectionContext context) {
-        var span = Span.current();
+    public CompletionStage<RoutingTableHandler> ensureRoutingTable(ConnectionContext context, Span span) {
         return ensureDatabaseNameIsCompleted(context, span).thenCompose(ctxAndHandler -> {
             var completedContext = ctxAndHandler.context();
             var handler = ctxAndHandler.handler() != null

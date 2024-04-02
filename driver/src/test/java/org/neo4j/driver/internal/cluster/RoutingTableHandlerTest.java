@@ -53,6 +53,8 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
@@ -103,14 +105,14 @@ class RoutingTableHandlerTest {
         Set<BoltServerAddress> routers = new LinkedHashSet<>(singletonList(router1));
         var clusterComposition = new ClusterComposition(42, readers, writers, routers, null);
         Rediscovery rediscovery = mock(RediscoveryImpl.class);
-        when(rediscovery.lookupClusterComposition(eq(routingTable), eq(connectionPool), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(eq(routingTable), eq(connectionPool), any(), any(), any(), any()))
                 .thenReturn(completedFuture(new ClusterCompositionLookupResult(clusterComposition)));
 
         var handler = newRoutingTableHandler(routingTable, rediscovery, connectionPool);
 
         assertNotNull(await(handler.ensureRoutingTable(simple(false))));
 
-        verify(rediscovery).lookupClusterComposition(eq(routingTable), eq(connectionPool), any(), any(), any());
+        verify(rediscovery).lookupClusterComposition(eq(routingTable), eq(connectionPool), any(), any(), any(), any());
         assertArrayEquals(
                 new BoltServerAddress[] {reader1, reader2},
                 routingTable.readers().toArray());
@@ -148,13 +150,13 @@ class RoutingTableHandlerTest {
         var connectionPool = newConnectionPoolMock();
 
         var rediscovery = newRediscoveryMock();
-        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any(), any()))
                 .thenReturn(completedFuture(new ClusterCompositionLookupResult(
                         new ClusterComposition(42, asOrderedSet(A, B), asOrderedSet(B, C), asOrderedSet(A, C), null))));
 
         var registry = new RoutingTableRegistry() {
             @Override
-            public CompletionStage<RoutingTableHandler> ensureRoutingTable(ConnectionContext context) {
+            public CompletionStage<RoutingTableHandler> ensureRoutingTable(ConnectionContext context, Span span) {
                 throw new UnsupportedOperationException();
             }
 
@@ -191,7 +193,7 @@ class RoutingTableHandlerTest {
         RoutingTable routingTable = new ClusterRoutingTable(defaultDatabase(), new FakeClock());
 
         var rediscovery = newRediscoveryMock();
-        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any()))
+        when(rediscovery.lookupClusterComposition(any(), any(), any(), any(), any(), any()))
                 .thenReturn(Futures.failedFuture(new RuntimeException("Bang!")));
 
         var connectionPool = newConnectionPoolMock();
@@ -217,7 +219,7 @@ class RoutingTableHandlerTest {
         assertEquals(routingTable, actual);
 
         verify(routingTable).isStaleFor(mode);
-        verify(rediscovery).lookupClusterComposition(eq(routingTable), eq(connectionPool), any(), any(), any());
+        verify(rediscovery).lookupClusterComposition(eq(routingTable), eq(connectionPool), any(), any(), any(), any());
     }
 
     private void testNoRediscoveryWhenNotStale(AccessMode staleMode, AccessMode notStaleMode) {
@@ -232,7 +234,7 @@ class RoutingTableHandlerTest {
         assertNotNull(await(handler.ensureRoutingTable(contextWithMode(notStaleMode))));
         verify(routingTable).isStaleFor(notStaleMode);
         verify(rediscovery, never())
-                .lookupClusterComposition(eq(routingTable), eq(connectionPool), any(), any(), any());
+                .lookupClusterComposition(eq(routingTable), eq(connectionPool), any(), any(), any(), any());
     }
 
     private static RoutingTable newStaleRoutingTableMock(AccessMode mode) {
@@ -256,7 +258,7 @@ class RoutingTableHandlerTest {
         Set<BoltServerAddress> noServers = Collections.emptySet();
         var clusterComposition = new ClusterComposition(1, noServers, noServers, noServers, null);
         when(rediscovery.lookupClusterComposition(
-                        any(RoutingTable.class), any(ConnectionPool.class), any(), any(), any()))
+                        any(RoutingTable.class), any(ConnectionPool.class), any(), any(), any(), any()))
                 .thenReturn(completedFuture(new ClusterCompositionLookupResult(clusterComposition)));
         return rediscovery;
     }

@@ -60,6 +60,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -301,14 +303,14 @@ class LoadBalancerTest {
         when(rediscovery.resolve()).thenReturn(Arrays.asList(A, B));
 
         var routingTables = mock(RoutingTableRegistry.class);
-        when(routingTables.ensureRoutingTable(any(ConnectionContext.class)))
+        when(routingTables.ensureRoutingTable(any(ConnectionContext.class), any(Span.class)))
                 .thenThrow(new ServiceUnavailableException("boooo"));
 
         var loadBalancer = newLoadBalancer(connectionPool, routingTables, rediscovery);
 
         var exception = assertThrows(ServiceUnavailableException.class, () -> await(loadBalancer.verifyConnectivity()));
         assertThat(exception.getMessage(), startsWith("Unable to connect to database management service,"));
-        verify(routingTables).ensureRoutingTable(any(ConnectionContext.class));
+        verify(routingTables).ensureRoutingTable(any(ConnectionContext.class), any(Span.class));
     }
 
     @Test
@@ -319,13 +321,13 @@ class LoadBalancerTest {
         when(rediscovery.resolve()).thenReturn(Arrays.asList(A, B));
 
         var routingTables = mock(RoutingTableRegistry.class);
-        when(routingTables.ensureRoutingTable(any(ConnectionContext.class))).thenThrow(new RuntimeException("boo"));
+        when(routingTables.ensureRoutingTable(any(ConnectionContext.class), any(Span.class))).thenThrow(new RuntimeException("boo"));
 
         var loadBalancer = newLoadBalancer(connectionPool, routingTables, rediscovery);
 
         var exception = assertThrows(RuntimeException.class, () -> await(loadBalancer.verifyConnectivity()));
         assertThat(exception.getMessage(), startsWith("boo"));
-        verify(routingTables).ensureRoutingTable(any(ConnectionContext.class));
+        verify(routingTables).ensureRoutingTable(any(ConnectionContext.class), any(Span.class));
     }
 
     @Test
@@ -336,12 +338,12 @@ class LoadBalancerTest {
         when(rediscovery.resolve()).thenReturn(Arrays.asList(A, B));
 
         var routingTables = mock(RoutingTableRegistry.class);
-        when(routingTables.ensureRoutingTable(any(ConnectionContext.class))).thenReturn(Futures.completedWithNull());
+        when(routingTables.ensureRoutingTable(any(ConnectionContext.class), any(Span.class))).thenReturn(Futures.completedWithNull());
 
         var loadBalancer = newLoadBalancer(connectionPool, routingTables, rediscovery);
 
         await(loadBalancer.verifyConnectivity());
-        verify(routingTables).ensureRoutingTable(any(ConnectionContext.class));
+        verify(routingTables).ensureRoutingTable(any(ConnectionContext.class), any(Span.class));
     }
 
     @ParameterizedTest
@@ -356,7 +358,7 @@ class LoadBalancerTest {
         var routingTables = mock(RoutingTableRegistry.class);
         var handler = mock(RoutingTableHandler.class);
         when(handler.routingTable()).thenReturn(routingTable);
-        when(routingTables.ensureRoutingTable(any(ConnectionContext.class)))
+        when(routingTables.ensureRoutingTable(any(ConnectionContext.class), any(Span.class)))
                 .thenReturn(CompletableFuture.completedFuture(handler));
         var rediscovery = mock(Rediscovery.class);
         var loadBalancer = new LoadBalancer(
@@ -387,7 +389,7 @@ class LoadBalancerTest {
         }
 
         var inOrder = inOrder(routingTables, context, databaseNameFuture);
-        inOrder.verify(routingTables).ensureRoutingTable(context);
+        inOrder.verify(routingTables).ensureRoutingTable(context, any(Span.class));
         inOrder.verify(context).databaseNameFuture();
         inOrder.verify(databaseNameFuture).isDone();
         if (completed) {
@@ -453,7 +455,7 @@ class LoadBalancerTest {
         var routingTables = mock(RoutingTableRegistry.class);
         var handler = mock(RoutingTableHandler.class);
         when(handler.routingTable()).thenReturn(routingTable);
-        when(routingTables.ensureRoutingTable(any(ConnectionContext.class)))
+        when(routingTables.ensureRoutingTable(any(ConnectionContext.class), any(Span.class)))
                 .thenReturn(CompletableFuture.completedFuture(handler));
         var rediscovery = mock(Rediscovery.class);
         return new LoadBalancer(

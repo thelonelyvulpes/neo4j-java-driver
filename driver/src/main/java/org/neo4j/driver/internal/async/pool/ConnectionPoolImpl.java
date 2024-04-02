@@ -42,6 +42,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
@@ -126,10 +127,10 @@ public class ConnectionPoolImpl implements ConnectionPool {
 
         var acquireEvent = metricsListener.createListenerEvent();
         metricsListener.beforeAcquiringOrCreating(pool.id(), acquireEvent);
+        var current = Span.current();
         var channelFuture = pool.acquire(overrideAuthToken);
-
         return channelFuture.handle((channel, error) -> {
-            try {
+            try (var ignored = current.makeCurrent()) {
                 processAcquisitionError(pool, address, error);
                 assertNotClosed(address, channel, pool);
                 setAuthorizationStateListener(channel, pool.healthChecker());

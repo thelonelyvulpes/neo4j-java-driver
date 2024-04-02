@@ -114,7 +114,7 @@ public class LoadBalancer implements ConnectionProvider {
                 .setSpanKind(SpanKind.CLIENT)
                 .startSpan();
 
-        return routingTables.ensureRoutingTable(context)
+        return routingTables.ensureRoutingTable(context, span)
                 .thenCompose(handler -> acquire(context.mode(), handler.routingTable(), context.overrideAuthToken(), span)
                 .thenApply(connection -> new RoutingConnection(
                         connection,
@@ -128,7 +128,7 @@ public class LoadBalancer implements ConnectionProvider {
     @Override
     public CompletionStage<Void> verifyConnectivity() {
         return this.supportsMultiDb()
-                .thenCompose(supports -> routingTables.ensureRoutingTable(simple(supports)))
+                .thenCompose(supports -> routingTables.ensureRoutingTable(simple(supports), Span.current()))
                 .handle((ignored, error) -> {
                     if (error != null) {
                         var cause = completionExceptionCause(error);

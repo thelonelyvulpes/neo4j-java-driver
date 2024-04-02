@@ -49,6 +49,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -95,7 +97,8 @@ class RoutingTableRegistryImplTest {
         // When
         var database = database(databaseName);
         routingTables.ensureRoutingTable(
-                new ImmutableConnectionContext(database, Collections.emptySet(), AccessMode.READ));
+                new ImmutableConnectionContext(database, Collections.emptySet(), AccessMode.READ),
+                Span.getInvalid());
 
         // Then
         assertTrue(map.containsKey(database));
@@ -116,7 +119,7 @@ class RoutingTableRegistryImplTest {
         var context = new ImmutableConnectionContext(database, Collections.emptySet(), AccessMode.READ);
 
         // When
-        var actual = await(routingTables.ensureRoutingTable(context));
+        var actual = await(routingTables.ensureRoutingTable(context, Span.getInvalid()));
 
         // Then it is the one we put in map that is picked up.
         verify(handler).ensureRoutingTable(context);
@@ -136,7 +139,7 @@ class RoutingTableRegistryImplTest {
 
         var context = new ImmutableConnectionContext(defaultDatabase(), Collections.emptySet(), mode);
         // When
-        routingTables.ensureRoutingTable(context);
+        routingTables.ensureRoutingTable(context, Span.getInvalid());
 
         // Then
         verify(handler).ensureRoutingTable(context);

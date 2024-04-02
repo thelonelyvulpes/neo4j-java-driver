@@ -289,7 +289,7 @@ public class RediscoveryImpl implements Rediscovery {
             });
         }
         return result.thenApply(composition ->
-                composition != null ? new ClusterCompositionLookupResult(composition, resolvedRouterSet) : null);
+                composition != null ? new   ClusterCompositionLookupResult(composition, resolvedRouterSet) : null);
     }
 
     private CompletionStage<ClusterComposition> lookupOnRouter(

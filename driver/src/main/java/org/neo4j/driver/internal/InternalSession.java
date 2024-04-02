@@ -95,9 +95,7 @@ public class InternalSession extends AbstractQueryRunner implements Session {
     }
 
     public Transaction beginTransaction(TransactionConfig config, String txType) {
-        var ot = GlobalOpenTelemetry.get();
-        var tracer = ot.getTracer("driver", "5.15.0");
-        var span = tracer.spanBuilder("Transaction").startSpan();
+        var span = GlobalOpenTelemetry.getTracer("driver", "5.15.0").spanBuilder("Transaction").startSpan();
         try (var scope = span.makeCurrent()) {
             var tx = Futures.blockingGet(
                     session.beginTransactionAsync(config, txType, new ApiTelemetryWork(TelemetryApi.UNMANAGED_TRANSACTION), span),
@@ -181,43 +179,43 @@ public class InternalSession extends AbstractQueryRunner implements Session {
         // it is unsafe to execute retries in the event loop threads because this can cause a deadlock
         // event loop thread will bock and wait for itself to read some data
         var apiTelemetryWork = new ApiTelemetryWork(telemetryApi);
-        var span = GlobalOpenTelemetry.getTracer("Driver", "5.15").spanBuilder("TxFunc").startSpan();
-        try (var scope = span.makeCurrent()) {
-            var r = session.retryLogic().retry(() -> {
-                try (var tx = beginTransaction(mode, config, apiTelemetryWork, flush)) {
+        var span = GlobalOpenTelemetry.getTracer("Driver", "5.15").spanBuilder("Client Tx").startSpan();
 
-                    var result = work.execute(tx);
-                    if (result instanceof Result) {
-                        throw new ClientException(String.format(
-                                "%s is not a valid return value, it should be consumed before producing a return value",
-                                Result.class.getName()));
+            var r = session.retryLogic().retry(() -> {
+                try (var ignored2 = span.makeCurrent()) {
+                    try (var tx = beginTransaction(mode, config, apiTelemetryWork, flush)) {
+
+                        var result = work.execute(tx);
+                        if (result instanceof Result) {
+                            throw new ClientException(String.format(
+                                    "%s is not a valid return value, it should be consumed before producing a return value",
+                                    Result.class.getName()));
+                        }
+                        if (tx.isOpen()) {
+                            // commit tx if a user has not explicitly committed or rolled back the transaction
+                            tx.commit();
+                        }
+                        return result;
                     }
-                    if (tx.isOpen()) {
-                        // commit tx if a user has not explicitly committed or rolled back the transaction
-                        tx.commit();
-                    }
-                    return result;
                 }
             });
+        try (var ignored = span.makeCurrent()) {
             span.end();
-            return r;
         }
+        return r;
     }
 
     private Transaction beginTransaction(
             AccessMode mode, TransactionConfig config, ApiTelemetryWork apiTelemetryWork, boolean flush) {
-        var ot = GlobalOpenTelemetry.get();
-        var tracer = ot.getTracer("driver", "5.15.0");
-        var span = tracer
+        var span = GlobalOpenTelemetry
+                .getTracer("driver", "5.15.0")
                 .spanBuilder("Transaction")
                 .setSpanKind(SpanKind.CLIENT)
                 .startSpan();
-        try (var scope = span.makeCurrent()) {
             var tx = Futures.blockingGet(
                     session.beginTransactionAsync(mode, config, null, apiTelemetryWork, flush, span),
                     () -> terminateConnectionOnThreadInterrupt("Thread interrupted while starting a transaction"));
             return new InternalTransaction(tx, span);
-        }
     }
 
     private void terminateConnectionOnThreadInterrupt(String reason) {

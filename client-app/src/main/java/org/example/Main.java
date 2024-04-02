@@ -1,8 +1,22 @@
+/*
+ * Copyright (c) "Neo4j"
+ * Neo4j Sweden AB [https://neo4j.com]
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.example;
 
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.OpenTelemetrySdkBuilder;
@@ -18,36 +32,41 @@ import org.neo4j.driver.SessionConfig;
 public class Main {
 
     public static void main(String[] args) {
-        var otb = makeBuilder();
+        var address = "neo4j://127.0.0.1:20017";
+        var badRoute = false;
 
+        var otb = createOpenTelemetry();
         try (var ot = otb.buildAndRegisterGlobal()) {
-            Tracer tracer = ot.getTracer("app", "0.1.0");
-            runDriver(ot, tracer);
+            runDriver(ot, address, badRoute);
         }
     }
 
-    private static void runDriver(OpenTelemetry ot, Tracer tracer) {
+    public static void runDriver(OpenTelemetry ot, String address, boolean badRoute) {
         var cfg = Config.builder().withOpenTelemetry(ot).build();
-        var appSpan = tracer.spanBuilder("complete work").setSpanKind(SpanKind.CLIENT).startSpan();
-
-        try (var scope = appSpan.makeCurrent()) {
-            try (var driver = GraphDatabase.driver("neo4j://127.0.0.1:20455", AuthTokens.none(), cfg)) {
-                org.neo4j.driver.internal.cluster.loadbalancing.LoadBalancer.forceSSR = false;
-                try (var session = driver.session()) {
-                    session.executeWrite(tx -> {
-                        var cursor = tx.run("CREATE (:Node)");
-                        cursor.consume();
-
-                        var r = tx.run("UNWIND range(1, 10) as x return x").stream().toList();
-                        return 1;
-                    });
-                }
+        try (var driver = GraphDatabase.driver(address, AuthTokens.none(), cfg)) {
+            org.neo4j.driver.internal.cluster.loadbalancing.LoadBalancer.forceSSR = badRoute;
+            try (var session = driver.session(SessionConfig.builder().withDatabase("neo4j").build())) {
+                session.executeWrite(tx -> {
+                    var cursor = tx.run("CREATE (:Node)");
+                    cursor.consume();
+                    var ignored = tx.run("UNWIND range(1, 10) as x return x").stream().toList();
+                    return 1;
+                });
             }
-            appSpan.end();
+
+            try (var session = driver.session(SessionConfig.builder().withDatabase("neo4j").build())) {
+                session.executeWrite(tx -> {
+                    var cursor = tx.run("CREATE (:Node)");
+                    cursor.consume();
+                    var ignored = tx.run("UNWIND range(1, 10) as x return x").stream().toList();
+                    return 1;
+                });
+            }
         }
     }
 
-    private static OpenTelemetrySdkBuilder makeBuilder() {
+
+    private static OpenTelemetrySdkBuilder createOpenTelemetry() {
         Resource resource = Resource.getDefault()
                 .toBuilder()
                 .put(ResourceAttributes.SERVICE_NAME, "client-app")
@@ -65,3 +84,4 @@ public class Main {
                 .setTracerProvider(sdkTracerProvider);
     }
 }
+

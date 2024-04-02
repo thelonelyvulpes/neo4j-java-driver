@@ -4,12 +4,8 @@ libraries. For an overview of the licenses see the NOTICE.txt file.
 
 ------------------------------------------------------------------------------
 Apache Software License, Version 2.0
-  Jackson-annotations
-  Jackson-core
-  jackson-databind
   Netty/Buffer
   Netty/Codec
-  Netty/Codec/HTTP
   Netty/Common
   Netty/Handler
   Netty/Resolver
@@ -18,6 +14,7 @@ Apache Software License, Version 2.0
   Netty/Transport/Native/Unix/Common
   Non-Blocking Reactive Foundation for the JVM
   OpenTelemetry Java
+  OpenTelemetry Semantic Conventions Java
 ------------------------------------------------------------------------------
 
                                  Apache License

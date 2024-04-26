@@ -21,6 +21,8 @@ import static org.neo4j.driver.internal.handlers.PullHandlers.newBoltV4BasicPull
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.internal.DatabaseBookmark;
 import org.neo4j.driver.internal.DatabaseName;
@@ -51,14 +53,15 @@ public class BoltProtocolV4 extends BoltProtocolV3 {
             Consumer<DatabaseBookmark> bookmarkConsumer,
             UnmanagedTransaction tx,
             RunWithMetadataMessage runMessage,
-            long fetchSize) {
+            long fetchSize,
+            Span span) {
         var runFuture = new CompletableFuture<Void>();
         var runHandler = new RunResponseHandler(runFuture, METADATA_EXTRACTOR, connection, tx);
 
-        var pullAllHandler = newBoltV4AutoPullHandler(query, runHandler, connection, bookmarkConsumer, tx, fetchSize);
-        var pullHandler = newBoltV4BasicPullHandler(query, runHandler, connection, bookmarkConsumer, tx);
+        var pullAllHandler = newBoltV4AutoPullHandler(query, runHandler, connection, bookmarkConsumer, tx, fetchSize, span);
+        var pullHandler = newBoltV4BasicPullHandler(query, runHandler, connection, bookmarkConsumer, tx, span);
 
-        return new ResultCursorFactoryImpl(connection, runMessage, runHandler, runFuture, pullHandler, pullAllHandler);
+        return new ResultCursorFactoryImpl(connection, runMessage, runHandler, runFuture, pullHandler, pullAllHandler, span);
     }
 
     @Override

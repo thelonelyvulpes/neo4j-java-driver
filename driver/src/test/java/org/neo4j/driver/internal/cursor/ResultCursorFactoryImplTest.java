@@ -29,6 +29,8 @@ import static org.neo4j.driver.testutil.TestUtil.await;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.neo4j.driver.internal.handlers.PullAllResponseHandler;
 import org.neo4j.driver.internal.handlers.RunResponseHandler;
@@ -79,7 +81,8 @@ class ResultCursorFactoryImplTest {
         var pullAllHandler = mock(PullAllResponseHandler.class);
 
         ResultCursorFactory cursorFactory =
-                new ResultCursorFactoryImpl(connection, runMessage, runHandler, runFuture, pullHandler, pullAllHandler);
+                new ResultCursorFactoryImpl(connection, runMessage, runHandler, runFuture, pullHandler, pullAllHandler,
+                        Span.current());
 
         // When
         cursorFactory.asyncResult();
@@ -131,7 +134,8 @@ class ResultCursorFactoryImplTest {
         var pullHandler = mock(PullResponseHandler.class);
         var pullAllHandler = mock(PullAllResponseHandler.class);
 
-        return new ResultCursorFactoryImpl(connection, runMessage, runHandler, runFuture, pullHandler, pullAllHandler);
+        return new ResultCursorFactoryImpl(connection, runMessage, runHandler, runFuture, pullHandler, pullAllHandler,
+                Span.current());
     }
 
     private ResultCursorFactoryImpl newResultCursorFactory(Throwable runError) {

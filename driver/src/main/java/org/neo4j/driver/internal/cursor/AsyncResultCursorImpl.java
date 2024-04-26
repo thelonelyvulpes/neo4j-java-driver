@@ -21,6 +21,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.exceptions.NoSuchRecordException;
 import org.neo4j.driver.internal.handlers.PullAllResponseHandler;
@@ -32,12 +34,14 @@ public class AsyncResultCursorImpl implements AsyncResultCursor {
     private final Throwable runError;
     private final RunResponseHandler runHandler;
     private final PullAllResponseHandler pullAllHandler;
+    private final Span span;
 
     public AsyncResultCursorImpl(
-            Throwable runError, RunResponseHandler runHandler, PullAllResponseHandler pullAllHandler) {
+            Throwable runError, RunResponseHandler runHandler, PullAllResponseHandler pullAllHandler, Span span) {
         this.runError = runError;
         this.runHandler = runHandler;
         this.pullAllHandler = pullAllHandler;
+        this.span = span;
     }
 
     @Override

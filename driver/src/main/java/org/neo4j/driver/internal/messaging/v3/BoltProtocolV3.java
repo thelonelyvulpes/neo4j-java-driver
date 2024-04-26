@@ -221,14 +221,14 @@ public class BoltProtocolV3 implements BoltProtocol {
                 notificationConfig,
                 logging,
                 span);
-        return buildResultCursorFactory(connection, query, bookmarkConsumer, null, runMessage, fetchSize);
+        return buildResultCursorFactory(connection, query, bookmarkConsumer, null, runMessage, fetchSize, span);
     }
 
     @Override
     public ResultCursorFactory runInUnmanagedTransaction(
-            Connection connection, Query query, UnmanagedTransaction tx, long fetchSize, Span span) {
-        var runMessage = unmanagedTxRunMessage(query, span);
-        return buildResultCursorFactory(connection, query, (ignored) -> {}, tx, runMessage, fetchSize);
+            Connection connection, Query query, UnmanagedTransaction tx, long fetchSize, Span querySpan) {
+        var runMessage = unmanagedTxRunMessage(query, querySpan);
+        return buildResultCursorFactory(connection, query, (ignored) -> {}, tx, runMessage, fetchSize, querySpan);
     }
 
     @Override
@@ -242,12 +242,13 @@ public class BoltProtocolV3 implements BoltProtocol {
             Consumer<DatabaseBookmark> bookmarkConsumer,
             UnmanagedTransaction tx,
             RunWithMetadataMessage runMessage,
-            long ignored) {
+            long ignored,
+            Span querySpan) {
         var runFuture = new CompletableFuture<Void>();
         var runHandler = new RunResponseHandler(runFuture, METADATA_EXTRACTOR, connection, tx);
-        var pullHandler = newBoltV3PullAllHandler(query, runHandler, connection, bookmarkConsumer, tx);
+        var pullHandler = newBoltV3PullAllHandler(query, runHandler, connection, bookmarkConsumer, tx, querySpan);
 
-        return new AsyncResultCursorOnlyFactory(connection, runMessage, runHandler, runFuture, pullHandler);
+        return new AsyncResultCursorOnlyFactory(connection, runMessage, runHandler, runFuture, pullHandler, querySpan);
     }
 
     protected void verifyDatabaseNameBeforeTransaction(DatabaseName databaseName) {

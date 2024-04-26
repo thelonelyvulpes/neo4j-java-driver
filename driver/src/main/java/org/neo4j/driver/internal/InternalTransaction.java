@@ -73,12 +73,14 @@ public class InternalTransaction extends AbstractQueryRunner implements Transact
 
     @Override
     public Result run(Query query) {
-        try (var scope = this.span.makeCurrent()) {
-            var tracer = GlobalOpenTelemetry.getTracer("driver", "5.15.0");
-            var qspan = tracer.spanBuilder("Query")
+        try (var ignored0 = this.span.makeCurrent()) {
+            var qspan = GlobalOpenTelemetry
+                    .getTracer("driver", "5.15.0")
+                    .spanBuilder("Query")
                     .setSpanKind(SpanKind.CLIENT)
                     .startSpan();
-            try (var qscope = qspan.makeCurrent()) {
+
+            try (var ignored = qspan.makeCurrent()) {
                 var cursor = Futures.blockingGet(
                         tx.runAsync(query, qspan),
                         () -> terminateConnectionOnThreadInterrupt("Thread interrupted while running query in transaction"));

@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.internal.handlers.PullAllResponseHandler;
 import org.neo4j.driver.internal.handlers.RunResponseHandler;
 import org.neo4j.driver.internal.handlers.pulln.PullResponseHandler;
@@ -37,6 +39,7 @@ public class ResultCursorFactoryImpl implements ResultCursorFactory {
     private final PullAllResponseHandler pullAllHandler;
     private final Message runMessage;
     private final CompletableFuture<Void> runFuture;
+    private final Span span;
 
     public ResultCursorFactoryImpl(
             Connection connection,
@@ -44,7 +47,8 @@ public class ResultCursorFactoryImpl implements ResultCursorFactory {
             RunResponseHandler runHandler,
             CompletableFuture<Void> runFuture,
             PullResponseHandler pullHandler,
-            PullAllResponseHandler pullAllHandler) {
+            PullAllResponseHandler pullAllHandler,
+            Span span) {
         requireNonNull(connection);
         requireNonNull(runMessage);
         requireNonNull(runHandler);
@@ -58,6 +62,7 @@ public class ResultCursorFactoryImpl implements ResultCursorFactory {
         this.runFuture = runFuture;
         this.pullHandler = pullHandler;
         this.pullAllHandler = pullAllHandler;
+        this.span = span;
     }
 
     @Override
@@ -66,7 +71,7 @@ public class ResultCursorFactoryImpl implements ResultCursorFactory {
         connection.write(runMessage, runHandler); // queues the run message, will be flushed with pull message together
         pullAllHandler.prePopulateRecords();
         return runFuture.handle((ignored, error) ->
-                new DisposableAsyncResultCursor(new AsyncResultCursorImpl(error, runHandler, pullAllHandler)));
+                new DisposableAsyncResultCursor(new AsyncResultCursorImpl(error, runHandler, pullAllHandler, span)));
     }
 
     @Override

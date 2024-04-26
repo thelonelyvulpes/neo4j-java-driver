@@ -16,6 +16,7 @@
  */
 package org.example;
 
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -32,8 +33,7 @@ import org.neo4j.driver.SessionConfig;
 public class Main {
 
     public static void main(String[] args) {
-        var address = "neo4j://127.0.0.1:20017";
-        var badRoute = false;
+        var address = "neo4j://127.0.0.1:20094";
 
         var otb = createOpenTelemetry();
         try (var ot = otb.buildAndRegisterGlobal()) {
@@ -45,23 +45,19 @@ public class Main {
         var cfg = Config.builder().withOpenTelemetry(ot).build();
         try (var driver = GraphDatabase.driver(address, AuthTokens.none(), cfg)) {
             org.neo4j.driver.internal.cluster.loadbalancing.LoadBalancer.forceSSR = badRoute;
-            try (var session = driver.session(SessionConfig.builder().withDatabase("neo4j").build())) {
-                session.executeWrite(tx -> {
-                    var cursor = tx.run("CREATE (:Node)");
-                    cursor.consume();
-                    var ignored = tx.run("UNWIND range(1, 10) as x return x").stream().toList();
-                    return 1;
-                });
+            var sessionCfg = SessionConfig.builder().withDatabase("neo4j").build();
+            var span = GlobalOpenTelemetry.getTracer("more|").spanBuilder("usage").startSpan();
+            var ignored2 = span.makeCurrent();
+            for (int i = 0; i < 10; i++) {
+                try (var session = driver.session(sessionCfg)) {
+                    session.executeWrite(tx -> {
+                        var ignored = tx.run("CREATE (:Node)").stream().toList();
+                        return 1;
+                    });
+                }
             }
-
-            try (var session = driver.session(SessionConfig.builder().withDatabase("neo4j").build())) {
-                session.executeWrite(tx -> {
-                    var cursor = tx.run("CREATE (:Node)");
-                    cursor.consume();
-                    var ignored = tx.run("UNWIND range(1, 10) as x return x").stream().toList();
-                    return 1;
-                });
-            }
+            span.end();
+            ignored2.close();
         }
     }
 

@@ -26,6 +26,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.function.BiConsumer;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.internal.async.UnmanagedTransaction;
@@ -98,7 +100,7 @@ public class TransactionPullResponseCompletionListenerTest extends BasicPullResp
         var runHandler = mock(RunResponseHandler.class);
         var listener = new TransactionPullResponseCompletionListener(tx);
         var handler = new BasicPullResponseHandler(
-                mock(Query.class), runHandler, conn, BoltProtocolV4.METADATA_EXTRACTOR, listener);
+                mock(Query.class), runHandler, conn, BoltProtocolV4.METADATA_EXTRACTOR, listener, mock(Span.class));
 
         handler.installRecordConsumer(recordConsumer);
         handler.installSummaryConsumer(summaryConsumer);

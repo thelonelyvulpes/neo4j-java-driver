@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.internal.handlers.PullAllResponseHandler;
 import org.neo4j.driver.internal.handlers.RunResponseHandler;
@@ -36,13 +38,15 @@ public class AsyncResultCursorOnlyFactory implements ResultCursorFactory {
     protected final RunResponseHandler runHandler;
     private final CompletableFuture<Void> runFuture;
     protected final PullAllResponseHandler pullAllHandler;
+    private final Span span;
 
     public AsyncResultCursorOnlyFactory(
             Connection connection,
             Message runMessage,
             RunResponseHandler runHandler,
             CompletableFuture<Void> runFuture,
-            PullAllResponseHandler pullHandler) {
+            PullAllResponseHandler pullHandler,
+            Span span) {
         requireNonNull(connection);
         requireNonNull(runMessage);
         requireNonNull(runHandler);
@@ -55,6 +59,7 @@ public class AsyncResultCursorOnlyFactory implements ResultCursorFactory {
         this.runFuture = runFuture;
 
         this.pullAllHandler = pullHandler;
+        this.span = span;
     }
 
     public CompletionStage<AsyncResultCursor> asyncResult() {
@@ -63,7 +68,7 @@ public class AsyncResultCursorOnlyFactory implements ResultCursorFactory {
         pullAllHandler.prePopulateRecords();
 
         return runFuture.handle((ignored, error) ->
-                new DisposableAsyncResultCursor(new AsyncResultCursorImpl(error, runHandler, pullAllHandler)));
+                new DisposableAsyncResultCursor(new AsyncResultCursorImpl(error, runHandler, pullAllHandler, span)));
     }
 
     public CompletionStage<RxResultCursor> rxResult() {

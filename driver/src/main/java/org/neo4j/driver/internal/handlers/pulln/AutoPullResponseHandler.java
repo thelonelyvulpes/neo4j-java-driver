@@ -28,6 +28,8 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.internal.handlers.PullAllResponseHandler;
@@ -64,8 +66,9 @@ public class AutoPullResponseHandler extends BasicPullResponseHandler implements
             Connection connection,
             MetadataExtractor metadataExtractor,
             PullResponseCompletionListener completionListener,
-            long fetchSize) {
-        super(query, runResponseHandler, connection, metadataExtractor, completionListener, true);
+            long fetchSize,
+            Span querySpan) {
+        super(query, runResponseHandler, connection, metadataExtractor, completionListener, true, querySpan);
         this.fetchSize = fetchSize;
 
         // For pull everything ensure conditions for disabling auto pull are never met

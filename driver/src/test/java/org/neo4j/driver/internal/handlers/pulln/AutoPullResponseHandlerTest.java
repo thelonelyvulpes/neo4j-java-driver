@@ -31,6 +31,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.neo4j.driver.Query;
@@ -55,7 +57,7 @@ class AutoPullResponseHandlerTest extends PullAllResponseHandlerTestBase<AutoPul
                 connection,
                 BoltProtocolV3.METADATA_EXTRACTOR,
                 mock(PullResponseCompletionListener.class),
-                DEFAULT_FETCH_SIZE);
+                DEFAULT_FETCH_SIZE, mock(Span.class));
         handler.prePopulateRecords();
         return handler;
     }
@@ -70,7 +72,7 @@ class AutoPullResponseHandlerTest extends PullAllResponseHandlerTestBase<AutoPul
                 connection,
                 BoltProtocolV3.METADATA_EXTRACTOR,
                 mock(PullResponseCompletionListener.class),
-                fetchSize);
+                fetchSize, mock(Span.class));
         handler.prePopulateRecords();
         return handler;
     }

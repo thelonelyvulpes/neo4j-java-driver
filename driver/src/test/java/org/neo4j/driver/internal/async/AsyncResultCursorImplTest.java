@@ -42,6 +42,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Record;
@@ -378,19 +380,19 @@ class AsyncResultCursorImplTest {
     @Test
     void shouldThrowOnIsOpenAsync() {
         // GIVEN
-        var cursor = new AsyncResultCursorImpl(null, null, null);
+        var cursor = new AsyncResultCursorImpl(null, null, null, Span.current());
 
         // WHEN & THEN
         assertThrows(UnsupportedOperationException.class, cursor::isOpenAsync);
     }
 
     private static AsyncResultCursorImpl newCursor(PullAllResponseHandler pullAllHandler) {
-        return new AsyncResultCursorImpl(null, newRunResponseHandler(), pullAllHandler);
+        return new AsyncResultCursorImpl(null, newRunResponseHandler(), pullAllHandler, Span.current());
     }
 
     private static AsyncResultCursorImpl newCursor(
             RunResponseHandler runHandler, PullAllResponseHandler pullAllHandler) {
-        return new AsyncResultCursorImpl(null, runHandler, pullAllHandler);
+        return new AsyncResultCursorImpl(null, runHandler, pullAllHandler, Span.current());
     }
 
     private static RunResponseHandler newRunResponseHandler() {

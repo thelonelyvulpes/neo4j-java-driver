@@ -112,17 +112,24 @@ public class LoadBalancer implements ConnectionProvider {
                 .getTracer("driver", "5.15")
                 .spanBuilder("lb-conn")
                 .setSpanKind(SpanKind.CLIENT)
+                .setAttribute("tid", Thread.currentThread().getId())
                 .startSpan();
 
         return routingTables.ensureRoutingTable(context, span)
-                .thenCompose(handler -> acquire(context.mode(), handler.routingTable(), context.overrideAuthToken(), span)
-                .thenApply(connection -> new RoutingConnection(
-                        connection,
-                        Futures.joinNowOrElseThrow(
-                                context.databaseNameFuture(), PENDING_DATABASE_NAME_EXCEPTION_SUPPLIER),
-                        context.mode(),
-                        context.impersonatedUser(),
-                        handler)));
+                .thenCompose(handler ->
+                        {
+                            try (var ignored = span.makeCurrent()) {
+                                return acquire(context.mode(), handler.routingTable(), context.overrideAuthToken(), span)
+                                        .thenApply(connection -> new RoutingConnection(
+                                                connection,
+                                                Futures.joinNowOrElseThrow(
+                                                        context.databaseNameFuture(), PENDING_DATABASE_NAME_EXCEPTION_SUPPLIER),
+                                                context.mode(),
+                                                context.impersonatedUser(),
+                                                handler));
+                            }
+                        }
+                );
     }
 
     @Override

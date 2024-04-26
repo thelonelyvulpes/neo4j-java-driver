@@ -25,6 +25,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Value;
@@ -60,7 +62,8 @@ public class ListBasedPullHandler extends BasicPullResponseHandler {
                 mock(RunResponseHandler.class),
                 mock(Connection.class),
                 mock(MetadataExtractor.class),
-                mock(PullResponseCompletionListener.class));
+                mock(PullResponseCompletionListener.class),
+                mock(Span.class));
         this.list = list;
         this.error = error;
         when(super.metadataExtractor.extractSummary(any(Query.class), any(Connection.class), anyLong(), any()))

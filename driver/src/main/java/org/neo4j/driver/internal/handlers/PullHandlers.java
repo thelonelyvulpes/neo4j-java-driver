@@ -17,6 +17,8 @@
 package org.neo4j.driver.internal.handlers;
 
 import java.util.function.Consumer;
+
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.internal.DatabaseBookmark;
 import org.neo4j.driver.internal.async.UnmanagedTransaction;
@@ -33,7 +35,8 @@ public class PullHandlers {
             RunResponseHandler runHandler,
             Connection connection,
             Consumer<DatabaseBookmark> bookmarkConsumer,
-            UnmanagedTransaction tx) {
+            UnmanagedTransaction tx,
+            Span querySpan) {
         var completionListener = createPullResponseCompletionListener(connection, bookmarkConsumer, tx);
 
         return new LegacyPullAllResponseHandler(
@@ -46,11 +49,11 @@ public class PullHandlers {
             Connection connection,
             Consumer<DatabaseBookmark> bookmarkConsumer,
             UnmanagedTransaction tx,
-            long fetchSize) {
+            long fetchSize, Span span) {
         var completionListener = createPullResponseCompletionListener(connection, bookmarkConsumer, tx);
 
         return new AutoPullResponseHandler(
-                query, runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, completionListener, fetchSize);
+                query, runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, completionListener, fetchSize, span);
     }
 
     public static PullResponseHandler newBoltV4BasicPullHandler(
@@ -58,11 +61,11 @@ public class PullHandlers {
             RunResponseHandler runHandler,
             Connection connection,
             Consumer<DatabaseBookmark> bookmarkConsumer,
-            UnmanagedTransaction tx) {
+            UnmanagedTransaction tx, Span span) {
         var completionListener = createPullResponseCompletionListener(connection, bookmarkConsumer, tx);
 
         return new BasicPullResponseHandler(
-                query, runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, completionListener);
+                query, runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, completionListener, span);
     }
 
     private static PullResponseCompletionListener createPullResponseCompletionListener(

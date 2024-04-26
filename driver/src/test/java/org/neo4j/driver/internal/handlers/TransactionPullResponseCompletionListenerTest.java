@@ -23,6 +23,8 @@ import static org.neo4j.driver.internal.messaging.v3.BoltProtocolV3.METADATA_EXT
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.exceptions.ClientException;
@@ -63,7 +65,7 @@ class TransactionPullResponseCompletionListenerTest {
         var listener = new TransactionPullResponseCompletionListener(tx);
         var runHandler = new RunResponseHandler(new CompletableFuture<>(), METADATA_EXTRACTOR, null, null);
         PullResponseHandler handler = new BasicPullResponseHandler(
-                new Query("RETURN 1"), runHandler, connection, METADATA_EXTRACTOR, listener);
+                new Query("RETURN 1"), runHandler, connection, METADATA_EXTRACTOR, listener, Span.current());
         handler.installRecordConsumer((record, throwable) -> {});
         handler.installSummaryConsumer((resultSummary, throwable) -> {});
 

@@ -33,11 +33,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.exceptions.UnsupportedFeatureException;
 import org.neo4j.driver.internal.BoltServerAddress;
@@ -49,7 +50,6 @@ import org.neo4j.driver.internal.messaging.request.LogonMessage;
 import org.neo4j.driver.internal.security.InternalAuthToken;
 import org.neo4j.driver.internal.util.Futures;
 import org.neo4j.driver.internal.util.SessionAuthUtil;
-import io.opentelemetry.context.Scope;
 
 public class NettyChannelPool implements ExtendedChannelPool {
     /**
@@ -81,10 +81,7 @@ public class NettyChannelPool implements ExtendedChannelPool {
             Clock clock,
             OpenTelemetry openTelemetry) {
         this.poolTracer = openTelemetry.getTracer("driver", "5.15.0");
-        estSpan = poolTracer.spanBuilder("establishing connection").startSpan();
-        var ignored = estSpan.makeCurrent();
-        var span = poolTracer.spanBuilder("initialising socket").startSpan();
-        ignored.close();
+        var curr = Span.current();
         requireNonNull(address);
         requireNonNull(connector);
         requireNonNull(handler);
@@ -104,6 +101,13 @@ public class NettyChannelPool implements ExtendedChannelPool {
                         RELEASE_HEALTH_CHECK) {
                     @Override
                     protected ChannelFuture connectChannel(Bootstrap bootstrap) {
+                        var i = curr.makeCurrent();
+                        estSpan = poolTracer.spanBuilder("establishing connection").setAttribute("tid", Thread.currentThread().getId()).startSpan();
+                        var ignored = estSpan.makeCurrent();
+                        var span = poolTracer.spanBuilder("initialising socket").startSpan();
+                        ignored.close();
+                        i.close();
+
                         var creatingEvent = handler.channelCreating(id);
                         var connectedChannelFuture = connector.connect(address, bootstrap);
                         var channel = connectedChannelFuture.channel();
@@ -147,8 +151,8 @@ public class NettyChannelPool implements ExtendedChannelPool {
 
     @Override
     public CompletionStage<Channel> acquire(AuthToken overrideAuthToken) {
-        var current = Span.current();
         return asCompletionStage(delegate.acquire()).thenCompose(channel -> {
+            var current = Span.current();
             try (var ignored = current.makeCurrent()) {
                 return auth(channel, overrideAuthToken);
             }
@@ -156,9 +160,7 @@ public class NettyChannelPool implements ExtendedChannelPool {
     }
 
     private CompletionStage<Channel> auth(Channel channel, AuthToken overrideAuthToken) {
-        var logging = estSpan.makeCurrent();
-        var loggingOnSpan = poolTracer.spanBuilder("logging on").startSpan();
-        logging.close();
+        AtomicReference<Span> loggingOnSpan = new AtomicReference<>();
         CompletionStage<Channel> authStage;
         var authContext = authContext(channel);
         if (overrideAuthToken != null) {
@@ -222,6 +224,9 @@ public class NettyChannelPool implements ExtendedChannelPool {
                             // do not await for re-login
                             result = CompletableFuture.completedStage(channel);
                         } else {
+                            var logging = estSpan.makeCurrent();
+                            loggingOnSpan.set(poolTracer.spanBuilder("logging on").startSpan());
+                            logging.close();
                             var logonFuture = new CompletableFuture<Void>();
                             messageDispatcher(channel).enqueue(new LogonResponseHandler(logonFuture, channel, clock));
                             result = helloStage(channel)
@@ -234,15 +239,21 @@ public class NettyChannelPool implements ExtendedChannelPool {
                     },
                     channel.eventLoop());
         }
+
+
         return authStage.handle((ignored, throwable) -> {
+            var x = loggingOnSpan.get();
             if (throwable != null) {
-                var loggingOnScope = loggingOnSpan.makeCurrent();
-                loggingOnSpan.recordException(throwable);
-                loggingOnSpan.end();
-                loggingOnScope.close();
-                var est = estSpan.makeCurrent();
-                estSpan.end();
-                est.close();
+                if (x != null) {
+                    var loggingOnScope = x.makeCurrent();
+                    loggingOnSpan.get().recordException(throwable);
+                    loggingOnSpan.get().end();
+                    loggingOnScope.close();
+                    var est = estSpan.makeCurrent();
+                    estSpan.end();
+                    est.close();
+                }
+
                 channel.close();
                 release(channel);
                 if (throwable instanceof RuntimeException runtimeException) {
@@ -251,12 +262,14 @@ public class NettyChannelPool implements ExtendedChannelPool {
                     throw new CompletionException(throwable);
                 }
             } else {
-                var loggingOnScope = loggingOnSpan.makeCurrent();
-                loggingOnSpan.end();
-                loggingOnScope.close();
-                var est = estSpan.makeCurrent();
-                estSpan.end();
-                est.close();
+                if (x != null) {
+                    var loggingOnScope = x.makeCurrent();
+                    x.end();
+                    loggingOnScope.close();
+                    var est = estSpan.makeCurrent();
+                    estSpan.end();
+                    est.close();
+                }
                 return channel;
             }
         });

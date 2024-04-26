@@ -61,7 +61,7 @@ public class InternalResult implements Result {
     public boolean hasNext() {
         var res = blockingGet(cursor.peekAsync()) != null;
         if (!res) {
-            try (var scope = this.span.makeCurrent()) {
+            try (var ignored = this.span.makeCurrent()) {
                 this.span.end();
             }
         }
@@ -73,7 +73,7 @@ public class InternalResult implements Result {
         this.counter++;
         var record = blockingGet(cursor.nextAsync());
         if (record == null) {
-            try (var scope = this.span.makeCurrent()) {
+            try (var ignored = this.span.makeCurrent()) {
                 this.span.setAttribute("records", this.counter);
                 this.span.end();
             }
@@ -115,7 +115,7 @@ public class InternalResult implements Result {
     @Override
     public ResultSummary consume() {
         return blockingGet(cursor.consumeAsync().thenApply(x -> {
-            try (var scope = this.span.makeCurrent()){
+            try (var ignored = this.span.makeCurrent()){
                 this.span.addEvent("Cursor Consumed");
                 this.span.end();
             }

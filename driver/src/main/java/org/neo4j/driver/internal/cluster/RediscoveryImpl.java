@@ -230,20 +230,22 @@ public class RediscoveryImpl implements Rediscovery {
         CompletableFuture<ClusterComposition> result = completedWithNull();
         for (var address : routingTable.routers()) {
             result = result.thenCompose(composition -> {
-                if (composition != null) {
-                    return completedFuture(composition);
-                } else {
-                    return lookupOnRouter(
-                            address,
-                            true,
-                            routingTable,
-                            connectionPool,
-                            seenServers,
-                            bookmarks,
-                            impersonatedUser,
-                            authToken,
-                            baseError,
-                            span);
+                try (var ignored = span.makeCurrent()) {
+                    if (composition != null) {
+                        return completedFuture(composition);
+                    } else {
+                        return lookupOnRouter(
+                                address,
+                                true,
+                                routingTable,
+                                connectionPool,
+                                seenServers,
+                                bookmarks,
+                                impersonatedUser,
+                                authToken,
+                                baseError,
+                                span);
+                    }
                 }
             });
         }
@@ -310,7 +312,7 @@ public class RediscoveryImpl implements Rediscovery {
                         resolveAddress ? resolveByDomainNameOrThrowCompletionException(address, routingTable) : address)
                 .thenApply(address -> addAndReturn(seenServers, address))
                 .thenCompose(address -> {
-                    try (var scope = span.makeCurrent()) {
+                    try (var ignored = span.makeCurrent()) {
                         return connectionPool.acquire(address, overrideAuthToken);
                     }
                 })

@@ -24,6 +24,10 @@ import static org.neo4j.driver.internal.messaging.request.DiscardMessage.newDisc
 
 import java.util.Map;
 import java.util.function.BiConsumer;
+
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.Span;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Value;
@@ -48,6 +52,7 @@ public class BasicPullResponseHandler implements PullResponseHandler {
     protected final Connection connection;
     private final PullResponseCompletionListener completionListener;
     private final boolean syncSignals;
+    private final Span querySpan;
 
     private State state;
     private long toRequest;
@@ -59,8 +64,9 @@ public class BasicPullResponseHandler implements PullResponseHandler {
             RunResponseHandler runResponseHandler,
             Connection connection,
             MetadataExtractor metadataExtractor,
-            PullResponseCompletionListener completionListener) {
-        this(query, runResponseHandler, connection, metadataExtractor, completionListener, false);
+            PullResponseCompletionListener completionListener,
+            Span span) {
+        this(query, runResponseHandler, connection, metadataExtractor, completionListener, false, span);
     }
 
     public BasicPullResponseHandler(
@@ -69,15 +75,16 @@ public class BasicPullResponseHandler implements PullResponseHandler {
             Connection connection,
             MetadataExtractor metadataExtractor,
             PullResponseCompletionListener completionListener,
-            boolean syncSignals) {
+            boolean syncSignals,
+            Span span) {
         this.query = requireNonNull(query);
         this.runResponseHandler = requireNonNull(runResponseHandler);
         this.metadataExtractor = requireNonNull(metadataExtractor);
         this.connection = requireNonNull(connection);
         this.completionListener = requireNonNull(completionListener);
         this.syncSignals = syncSignals;
-
         this.state = State.READY_STATE;
+        this.querySpan = span;
     }
 
     @Override
@@ -192,7 +199,10 @@ public class BasicPullResponseHandler implements PullResponseHandler {
     }
 
     protected void writePull(long n) {
-        connection.writeAndFlush(new PullMessage(n, runResponseHandler.queryId()), this);
+        try (var ignored = this.querySpan.makeCurrent()) {
+            connection.writeAndFlush(new PullMessage(n, runResponseHandler.queryId()), this);
+            this.querySpan.addEvent("Pull");
+        }
     }
 
     protected void discardAll() {

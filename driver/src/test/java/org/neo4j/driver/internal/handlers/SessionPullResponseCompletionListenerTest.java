@@ -26,6 +26,8 @@ import static org.neo4j.driver.Values.value;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.exceptions.AuthorizationExpiredException;
@@ -110,7 +112,7 @@ class SessionPullResponseCompletionListenerTest {
         var runHandler = new RunResponseHandler(
                 new CompletableFuture<>(), BoltProtocolV3.METADATA_EXTRACTOR, mock(Connection.class), null);
         var handler = new BasicPullResponseHandler(
-                new Query("RETURN 1"), runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, listener);
+                new Query("RETURN 1"), runHandler, connection, BoltProtocolV3.METADATA_EXTRACTOR, listener, Span.current());
         handler.installRecordConsumer((record, throwable) -> {});
         handler.installSummaryConsumer((resultSummary, throwable) -> {});
         return handler;

@@ -41,6 +41,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
+import io.opentelemetry.api.trace.Span;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -365,7 +367,7 @@ class InternalResultTest {
         }
         pullAllHandler.onSuccess(emptyMap());
 
-        AsyncResultCursor cursor = new AsyncResultCursorImpl(null, runHandler, pullAllHandler);
+        AsyncResultCursor cursor = new AsyncResultCursorImpl(null, runHandler, pullAllHandler, mock(Span.class));
         return new InternalResult(connection, new DisposableAsyncResultCursor(cursor));
     }
 
